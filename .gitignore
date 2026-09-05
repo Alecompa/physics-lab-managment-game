@@ -1,0 +1,17 @@
+# Godot editor cache and local exports
+.godot/
+exports/
+
+# OS metadata and logs
+.DS_Store
+*.log
+
+# Temporary test saves, including interrupted atomic writes
+tests/.test_*
+tests/.ui_test_*
+
+# Generated UI captures and previous iteration reference images
+# The curated docs/prototype-v3.png remains tracked for the README.
+docs/screenshots/
+docs/archive/
+docs/*.png.import
