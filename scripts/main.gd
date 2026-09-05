@@ -4,6 +4,8 @@ const FloorView = preload("res://scripts/lab_floor.gd")
 const Portrait = preload("res://scripts/portrait.gd")
 const Schedule = preload("res://scripts/schedule_view.gd")
 const Chart = preload("res://scripts/resource_chart.gd")
+const Notebook = preload("res://scripts/notebook_view.gd")
+const TechTree = preload("res://scripts/tech_tree_view.gd")
 const U = preload("res://scripts/ui_kit.gd")
 var sim: LabSimulation
 var test_mode = false
@@ -38,6 +40,9 @@ var paper_commitments: Dictionary = {}
 var deferred_rebuild = false
 var modal_title: Label
 var menu_mode = "main"
+var modal_refreshers: Array[Callable] = []
+var archive_field = "any"
+var archive_tier = "any"
 
 func _ready() -> void:
 	theme = U.theme()
@@ -69,6 +74,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		elif build_kind != "": _cancel_build()
 		elif session_active: _show_pause_menu()
 		return
+	if is_instance_valid(modal_layer) and event.keycode == KEY_SPACE and not get_viewport().gui_get_focus_owner() is LineEdit:
+			_toggle_pause()
+			return
 	if is_instance_valid(menu_layer) or is_instance_valid(modal_layer) or not session_active: return
 	match event.keycode:
 		KEY_SPACE: _toggle_pause()
@@ -95,25 +103,31 @@ func _build_game() -> void:
 	root.add_child(header)
 	header.add_child(U.image("nuclear", U.ACCENT, 31))
 	header.add_child(U.label("FIELDWORK", 23))
-	var chapter = U.label("NORTH ANNEX", 10, U.MUTED)
-	chapter.tooltip_text = "A fixed starting laboratory. Space expansion will come in a later iteration."
-	header.add_child(chapter)
 	U.space(header)
 	header.add_child(U.image("coin", U.ACCENT, 21))
 	cash_label = U.label("", 19)
+	cash_label.custom_minimum_size.x = 108
+	cash_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	header.add_child(cash_label)
 	header.add_child(U.image("legendary", U.GOLD, 19))
 	impact_label = U.label("", 17, U.GOLD)
+	impact_label.custom_minimum_size.x = 45
+	impact_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	header.add_child(impact_label)
 	U.space(header)
 	clock_label = U.label("", 15)
+	clock_label.custom_minimum_size.x = 165
+	clock_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	header.add_child(clock_label)
-	pause_button = U.button("", _toggle_pause, "play", "Pause or resume / Space")
+	pause_button = U.button("Resume", _toggle_pause, "play", "Pause or resume / Space")
+	pause_button.custom_minimum_size.x = 112
 	header.add_child(pause_button)
 	for speed in [1, 2, 4]:
 		var control = U.button("%dx" % speed, func(): sim.speed = speed; _refresh())
 		control.set_meta("speed", speed)
 		header.add_child(control)
+	header.add_child(U.button("", _program_window, "program", "Research program and publication archive"))
+	header.add_child(U.button("", _development, "tree", "Development tree"))
 	header.add_child(U.button("", _statistics, "chart", "Resource history"))
 	header.add_child(U.button("", _help, "info", "How to play / H"))
 	header.add_child(U.button("", _show_pause_menu, "menu", "Pause menu / Esc"))
@@ -159,15 +173,19 @@ func _build_game() -> void:
 	floor_card.add_child(floor_view)
 	hint_label = U.label("Click a person or workstation to inspect it.", 11, U.MUTED)
 	floor_card.add_child(hint_label)
-	var notebook = U.panel(left, U.PANEL, U.LINE, 10)
+	var notebook_frame = Notebook.new()
+	left.add_child(notebook_frame)
+	var notebook = U.column(6)
+	notebook_frame.add_child(notebook)
 	var notebook_head = U.row()
 	notebook.add_child(notebook_head)
-	notebook_head.add_child(U.image("study", U.MUTED, 15))
-	notebook_head.add_child(U.label("LAB NOTEBOOK", 10, U.MUTED))
+	notebook_head.add_child(U.image("study", Notebook.INK, 15))
+	notebook_head.add_child(U.label("LAB NOTEBOOK", 10, Notebook.INK))
 	U.space(notebook_head)
 	notebook_head.add_child(U.button("History", _notebook_history, "load"))
 	event_label = RichTextLabel.new()
 	event_label.bbcode_enabled = false
+	event_label.add_theme_color_override("default_color", Notebook.INK)
 	event_label.custom_minimum_size.y = 55
 	event_label.add_theme_font_size_override("normal_font_size", 12)
 	event_label.scroll_active = false
@@ -177,7 +195,7 @@ func _build_game() -> void:
 	side_panel.custom_minimum_size.x = 370
 	var tab_row = U.row(4)
 	panel.add_child(tab_row)
-	for item in [["Build", "build"], ["People", "people"], ["Papers", "paper"], ["Develop", "upgrade"]]:
+	for item in [["Build", "build"], ["People", "people"], ["Papers", "paper"]]:
 		var tab = U.button(item[0], func(): _set_page(item[0]), item[1])
 		tab.add_theme_font_size_override("font_size", 11)
 		tab.add_theme_constant_override("icon_max_width", 15)
@@ -216,57 +234,109 @@ func _rebuild_sidebar() -> void:
 		"Build": _build_page()
 		"People": _people_page()
 		"Papers": _papers_page()
-		"Develop": _develop_page()
 	for key in tabs: tabs[key].add_theme_stylebox_override("normal", U.box(Color("46534d") if page == key else U.CARD, U.ACCENT if page == key else U.LINE, 8))
 	_refresh()
 
 func _build_page() -> void:
-	var object = sim.desk_by_id(selected_id) if selected_kind == "desk" else sim.experiment_by_id(selected_id)
+	var object = sim.bed_by_id(selected_id) if selected_kind == "bed" else sim.desk_by_id(selected_id) if selected_kind == "desk" else sim.experiment_by_id(selected_id)
 	if not object.is_empty():
 		var inspector = U.panel(sidebar, U.CARD)
-		if object.kind == "desk":
-			inspector.add_child(U.label("Desk #%d" % object.id, 18))
-			var owners = PackedStringArray()
+		if object.kind == "bed":
+			inspector.add_child(U.label("Bed #%d" % object.id, 18))
+			var owner = "Unassigned"
 			for person in sim.staff:
-				if person.desk == object.id: owners.append(person.name)
-			inspector.add_child(U.label(" / ".join(owners) if not owners.is_empty() else "Shared desk", 12, U.MUTED, true))
-			inspector.add_child(U.button("Remove / +$210", func(): _confirm("Remove this desk?", "Assigned people will look for a shared desk.", func(): sim.remove_desk(object.id); selected_id = -1; _rebuild_sidebar()), "close"))
+				if person.bed == object.id: owner = person.name
+			inspector.add_child(U.label(owner, 14, U.ACCENT))
+			inspector.add_child(U.label("Full recovery for its assigned owner. Set ownership in People.", 12, U.MUTED, true))
+			inspector.add_child(U.button("Remove / +$157", func(): _confirm("Remove bed?", "Its owner will rest at 40% efficiency until assigned another bed.", func(): sim.remove_bed(object.id); selected_id = -1; _rebuild_sidebar()), "close"))
+		elif object.kind == "desk":
+			inspector.add_child(U.label("Desk #%d / Level %d" % [object.id, object.get("level", 1)], 18))
+			var status = U.label("", 12, U.MUTED, true)
+			inspector.add_child(status)
+			var upgrade = U.button("", func(): sim.upgrade_desk(object.id); _rebuild_sidebar(), "upgrade")
+			inspector.add_child(upgrade)
+			refreshers.append(func():
+				var level = object.get("level", 1)
+				status.text = "+%d%% analysis, writing and study.\n" % ((level - 1) * 15)
+				if level < 3: status.text += "Next level: +%d%% productivity / %s" % [level * 15, _money(level * 700)]
+				var reason = sim.desk_upgrade_reason(object)
+				upgrade.text = reason if reason != "" else "Upgrade / " + _money(level * 700)
+				upgrade.disabled = reason != ""
+			)
+			inspector.add_child(U.button("Remove / +$210", func(): _confirm("Remove desk?", "Assigned people will look for a shared desk.", func(): sim.remove_desk(object.id); selected_id = -1; _rebuild_sidebar()), "close"))
 		else:
 			inspector.add_child(U.label(sim.EQUIPMENT[object.kind].name, 18))
 			var status = U.label("", 12, U.MUTED, true)
 			inspector.add_child(status)
-			var upgrade = U.button("Upgrade", func(): sim.upgrade_experiment(object.id); _rebuild_sidebar(), "upgrade")
+			var next = U.label("", 12, U.ACCENT, true)
+			inspector.add_child(next)
+			var upgrade = U.button("", func(): sim.upgrade_experiment(object.id); _rebuild_sidebar(), "upgrade")
 			inspector.add_child(upgrade)
-			inspector.add_child(U.button("Service / $250", func(): sim.service_experiment(object.id), "build"))
-			inspector.add_child(U.button("Decommission", func(): _confirm("Decommission experiment?", "Recover 35% of its original price.", func(): sim.remove_experiment(object.id); selected_id = -1; _rebuild_sidebar()), "close"))
+			var service = U.button("Service / $250", func(): sim.service_experiment(object.id), "build")
+			inspector.add_child(service)
 			refreshers.append(func():
-				var mix = PackedStringArray()
-				for field in sim.output_mix(object): mix.append("%d%% %s" % [sim.output_mix(object)[field] * 100, sim.FIELDS[field].name])
-				status.text = "Level %d / %.0f%% condition\n%s" % [object.level, object.condition, " + ".join(mix)]
-				upgrade.text = "Maximum level" if object.level >= 3 else "Upgrade / " + _money(sim.upgrade_cost(object))
-				upgrade.disabled = object.level >= 3 or sim.funds < sim.upgrade_cost(object)
+				status.text = "Level %d / %.0f%% condition\nCapacity: %.2f base data/hour\n%s" % [object.level, object.condition, sim.capacity_for(object) / 24, _mix_text(object)]
+				if object.level < 3:
+					var upgraded = object.duplicate(true)
+					upgraded.level += 1
+					upgraded.condition = 100
+					next.text = "Next level: %.2f → %.2f base data/hour\nUpkeep: %s → %s/day\nCondition restored to 100%%\n%s" % [sim.capacity_for(object) / 24, sim.capacity_for(upgraded) / 24, _money(sim.EQUIPMENT[object.kind].upkeep * (1 + 0.25 * (object.level - 1))), _money(sim.EQUIPMENT[object.kind].upkeep * (1 + 0.25 * object.level)), _mix_text(upgraded)]
+				else: next.text = "Maximum instrument level"
+				var reason = sim.upgrade_block_reason(object)
+				upgrade.text = reason if reason != "" else "Upgrade / " + _money(sim.upgrade_cost(object))
+				upgrade.disabled = reason != ""
+				service.disabled = object.condition >= 99.9 or sim.funds < 250
 			)
+			inspector.add_child(U.label("MODULES / %d OF 2" % object.get("modules", []).size(), 11, U.MUTED))
+			for key in object.get("modules", []):
+				inspector.add_child(U.label(sim.Catalog.MODULES[key].name, 13, U.ACCENT))
+				inspector.add_child(U.label(sim.Catalog.MODULES[key].description, 11, U.MUTED, true))
+				inspector.add_child(U.button("Remove / recover 35%", func(): sim.remove_module(object.id, key); _rebuild_sidebar(), "close"))
+			inspector.add_child(U.button("Install module", func(): _module_window(object.id), "plus"))
+			inspector.add_child(U.button("Decommission", func(): _confirm("Decommission experiment?", "Recover 35% of the instrument's base purchase price. Installed modules are lost; remove them first to recover their value.", func(): sim.remove_experiment(object.id); selected_id = -1; _rebuild_sidebar()), "close"))
 	var heading = U.row()
 	sidebar.add_child(heading)
 	heading.add_child(U.label("PLACE IN THE LAB", 10, U.MUTED))
 	U.space(heading)
-	heading.add_child(U.button("", func(): _info("Building", "Experiments occupy 2×2 floor tiles in either laboratory. Desks occupy 2×1 tiles in the office and need a free chair tile below. Doorways, corridors and routes to workstations stay clear."), "info"))
-	for kind in ["desk", "optics", "vacuum", "detector", "quantum"]:
-		var spec = {"name": "Research desk", "cost": 600, "field": "", "description": "A physical desk for analysis, writing and study. One person can use it at a time."} if kind == "desk" else sim.EQUIPMENT[kind]
+	heading.add_child(U.button("", func(): _info("Building", "Experiments occupy 2×2 tiles in either upper laboratory. Desks occupy 2×1 office tiles and need a free chair below. Beds occupy 1×2 tiles along the sleeping area's upper wall, with access at their foot. Routes must stay clear."), "info"))
+	for kind in ["bed", "desk", "optics", "vacuum", "detector", "quantum"]:
+		var spec = {"name": "Bed", "cost": 450, "field": "", "description": "An individually assigned bed. Full recovery for its owner."} if kind == "bed" else {"name": "Research desk", "cost": 600, "field": "", "description": "Analysis, writing and study. One person can use it at a time."} if kind == "desk" else sim.EQUIPMENT[kind]
 		var card = U.panel(sidebar, U.CARD)
 		var line = U.row(10)
 		card.add_child(line)
-		line.add_child(U.image("desk" if kind == "desk" else spec.field, U.TEXT if kind == "desk" else Color(sim.FIELDS[spec.field].color), 28))
+		line.add_child(U.image(kind if kind in ["bed", "desk"] else spec.field, U.TEXT if kind in ["bed", "desk"] else Color(sim.FIELDS[spec.field].color), 28))
 		var title = U.column(2)
 		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		line.add_child(title)
 		title.add_child(U.label(spec.name, 15))
-		title.add_child(U.label(_money(spec.cost) + (" / 2×1" if kind == "desk" else " / 2×2"), 12, U.MUTED))
+		title.add_child(U.label(_money(spec.cost) + (" / 1×2" if kind == "bed" else " / 2×1" if kind == "desk" else " / 2×2"), 12, U.MUTED))
 		var choose = U.button("", func(): build_kind = kind; floor_view.build_kind = kind; _refresh(), "plus", spec.description)
 		line.add_child(choose)
 		card.get_parent().tooltip_text = spec.description
-		refreshers.append(func(): choose.disabled = sim.funds < spec.cost or kind != "desk" and not sim.equipment_unlocked(kind); choose.icon = U.icon("check" if build_kind == kind else "plus"))
+		refreshers.append(func(): choose.disabled = sim.funds < spec.cost or kind not in ["desk", "bed"] and not sim.equipment_unlocked(kind); choose.icon = U.icon("check" if build_kind == kind else "plus"))
 	if build_kind != "": sidebar.add_child(U.button("Cancel placement", _cancel_build, "close"))
+
+func _mix_text(experiment: Dictionary) -> String:
+	var pieces = PackedStringArray()
+	for field in sim.output_mix(experiment): pieces.append("%.2f %s" % [sim.output_mix(experiment)[field], sim.FIELDS[field].name])
+	return "Per base data: " + " + ".join(pieces)
+
+func _module_window(id: int) -> void:
+	var content = _open_modal("Instrument modules", 750)
+	var list = _scroll_body(content, 690, 490)
+	for key in sim.Catalog.MODULES:
+		var spec = sim.Catalog.MODULES[key]
+		var card = U.panel(list, U.CARD)
+		card.add_child(U.label(spec.name + " / " + _money(spec.cost), 16))
+		card.add_child(U.label(spec.description, 13, U.MUTED, true))
+		var action = U.button("Install", func(): sim.install_module(id, key); _rebuild_sidebar(); _module_window(id), "plus")
+		card.add_child(action)
+		modal_refreshers.append(func():
+			var reason = sim.module_reason(id, key)
+			action.text = reason if reason != "" else "Install / " + _money(spec.cost)
+			action.disabled = reason != ""
+		)
+	_refresh()
 
 func _portrait(person: Dictionary, dimension: int = 64) -> Control:
 	var portrait = Portrait.new()
@@ -320,7 +390,7 @@ func _people_page() -> void:
 	var energy = ProgressBar.new()
 	energy.show_percentage = false
 	energy.custom_minimum_size.y = 7
-	energy.tooltip_text = "Rest restores energy. Low energy reduces productivity."
+	energy.tooltip_text = "An assigned reachable bed restores full energy. Bedless rest is 40% as effective."
 	sidebar.add_child(energy)
 	var routine = U.panel(sidebar, U.CARD)
 	var routine_head = U.row()
@@ -358,6 +428,11 @@ func _people_page() -> void:
 	var desks = {-1: "Any free desk"}
 	for desk in sim.desks: desks[int(desk.id)] = "Desk #%d" % desk.id
 	_choice(sidebar, "Desk", desks, int(person.desk), func(value): sim.set_assignment(person.id, "desk", value))
+	var beds = {-1: "No bed / 40% recovery"}
+	for bed in sim.beds:
+		if sim.bed_owner(bed.id) in [-1, int(person.id)]: beds[int(bed.id)] = "Bed #%d" % bed.id
+	_choice(sidebar, "Bed", beds, int(person.bed), func(value): sim.set_assignment(person.id, "bed", value))
+	if person.bed == -1: sidebar.add_child(U.label("No assigned bed. Rest restores only 40% energy.", 12, U.GOLD, true))
 	var budget = U.row()
 	sidebar.add_child(budget)
 	budget.add_child(U.label(_money(sim.ROLES[person.role].salary) + "/day", 11, U.MUTED))
@@ -487,25 +562,6 @@ func _papers_page() -> void:
 			start.disabled = reason.text != ""
 		)
 
-func _develop_page() -> void:
-	sidebar.add_child(U.label("LAB DEVELOPMENT", 10, U.MUTED))
-	sidebar.add_child(U.label("Existing upgrades. Research programs will come later.", 11, U.MUTED, true))
-	for key in sim.UPGRADES:
-		var spec = sim.UPGRADES[key]
-		var card = U.panel(sidebar, U.CARD)
-		var line = U.row()
-		card.add_child(line)
-		line.add_child(U.image("upgrade", U.ACCENT, 22))
-		line.add_child(U.label(spec.name, 15, U.TEXT, true))
-		card.get_parent().tooltip_text = spec.description
-		var unlock = U.button("", func(): sim.unlock_upgrade(key), "legendary", spec.description)
-		card.add_child(unlock)
-		refreshers.append(func():
-			var dependency = spec.requires != "" and spec.requires not in sim.unlocked
-			unlock.text = "Unlocked" if key in sim.unlocked else "Requires " + sim.UPGRADES[spec.requires].name if dependency else "%d impact" % spec.cost
-			unlock.disabled = key in sim.unlocked or sim.prestige < spec.cost or dependency
-		)
-
 func _drop_menu() -> void:
 	if is_instance_valid(menu_layer): menu_layer.queue_free(); remove_child(menu_layer)
 	menu_layer = null
@@ -550,7 +606,7 @@ func _show_main_menu() -> void:
 	card.get_parent().custom_minimum_size.x = 325
 	card.get_parent().size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	card.add_child(U.label("Welcome to the lab", 24))
-	card.add_child(U.label("NORTH ANNEX / ITERATION 03", 10, U.MUTED))
+
 	var saves = sim.save_entries().filter(func(entry): return entry.valid) if not test_mode else []
 	if not saves.is_empty(): card.add_child(U.button("Continue", func(): _load_path(saves[0].path), "play"))
 	card.add_child(U.button("New laboratory", _new_game_menu, "plus"))
@@ -559,18 +615,32 @@ func _show_main_menu() -> void:
 	card.add_child(U.button("Quit", func(): get_tree().quit(), "close"))
 
 func _new_game_menu() -> void:
-	var content = _open_modal("New laboratory", 520)
+	var content = _open_modal("New laboratory", 760)
 	content.add_child(U.label("Laboratory name", 12, U.MUTED))
 	var name_edit = LineEdit.new()
-	name_edit.text = "The North Annex"
+	name_edit.text = "My laboratory"
 	name_edit.max_length = 60
 	content.add_child(name_edit)
-	content.add_child(U.label("A fixed lab, three desks, two PhD students and a researcher. Days last 48 seconds at 1x.", 13, U.MUTED, true))
+	content.add_child(U.label("Research program", 13, U.MUTED))
+	var program_choice = OptionButton.new()
+	for key in sim.Programs.PROGRAMS:
+		program_choice.add_item(sim.Programs.PROGRAMS[key].name)
+		program_choice.set_item_metadata(program_choice.item_count - 1, key)
+	content.add_child(program_choice)
+	var objective = U.label("", 14, U.TEXT, true)
+	content.add_child(objective)
+	var explain = func():
+		var spec = sim.Programs.PROGRAMS[program_choice.get_item_metadata(program_choice.selected)]
+		objective.text = spec.description + "\n\nFinal discovery: " + spec.discovery
+	program_choice.item_selected.connect(func(_index): explain.call())
+	explain.call()
+	content.add_child(U.label("Four cumulative milestones. Every qualifying publication counts throughout the run. You can keep playing after the final discovery.", 12, U.MUTED, true))
 	content.add_child(U.button("Open the laboratory", func():
 		var title = name_edit.text.strip_edges()
 		sim.new_lab()
 		sim.autosave_enabled = not test_mode
-		sim.lab_name = title if title != "" else "The North Annex"
+		sim.lab_name = title if title != "" else "My laboratory"
+		sim.choose_program(program_choice.get_item_metadata(program_choice.selected))
 		_enter_lab()
 	, "play"))
 
@@ -591,6 +661,7 @@ func _enter_lab() -> void:
 	paper_commitments.clear()
 	_set_page("Build")
 	if not sim.pending_result.is_empty(): _publication_result(sim.pending_result)
+	elif not sim.pending_milestone.is_empty(): _milestone()
 
 func _show_pause_menu() -> void:
 	if not session_active or is_instance_valid(modal_layer): return
@@ -615,6 +686,8 @@ func _show_pause_menu() -> void:
 	card.add_child(U.button("Resume", _resume_from_menu, "play"))
 	card.add_child(U.button("Save laboratory", _save_menu, "save"))
 	card.add_child(U.button("Load laboratory", _load_menu, "load"))
+	card.add_child(U.button("Research program", _program_window, "program"))
+	card.add_child(U.button("Development tree", _development, "tree"))
 	card.add_child(U.button("Resource history", _statistics, "chart"))
 	card.add_child(U.button("Return to main menu", _return_to_main, "back"))
 	card.add_child(U.button("Save and quit", _quit_game, "close"))
@@ -622,6 +695,7 @@ func _show_pause_menu() -> void:
 func _resume_from_menu() -> void:
 	_drop_menu()
 	if not sim.pending_result.is_empty(): _publication_result(sim.pending_result)
+	elif not sim.pending_milestone.is_empty(): _milestone()
 	else: sim.paused = false
 	_refresh()
 
@@ -636,17 +710,21 @@ func _quit_game() -> void:
 
 func _open_modal(title: String, width: int = 640, on_close: Callable = Callable()) -> VBoxContainer:
 	_close_modal()
-	sim.paused = true
 	modal_return = on_close
 	modal_layer = Control.new()
+	modal_layer.set_meta("management_window", true)
+	modal_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	modal_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(modal_layer)
 	var shade = ColorRect.new()
 	shade.color = Color(0.03, 0.04, 0.05, 0.85)
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.offset_top = 72 if session_active else 0
 	modal_layer.add_child(shade)
 	var center = CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.offset_top = 72 if session_active else 0
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	modal_layer.add_child(center)
 	var frame = U.panel(center, U.PANEL, U.LINE, 22)
 	frame.get_parent().custom_minimum_size.x = width
@@ -655,7 +733,7 @@ func _open_modal(title: String, width: int = 640, on_close: Callable = Callable(
 	modal_title = U.label(title, 23, U.TEXT, true)
 	head.add_child(modal_title)
 	U.space(head)
-	head.add_child(U.button("", _close_modal, "close", "Close / keep time paused"))
+	head.add_child(U.button("", _close_modal, "close", "Close / Esc"))
 	modal_box = U.column(14)
 	frame.add_child(modal_box)
 	_refresh()
@@ -666,6 +744,7 @@ func _close_modal() -> void:
 	modal_layer.queue_free()
 	remove_child(modal_layer)
 	modal_layer = null
+	modal_refreshers.clear()
 	var action = modal_return
 	modal_return = Callable()
 	if action.is_valid(): action.call()
@@ -731,7 +810,7 @@ func _load_menu() -> void:
 		var text = U.column(2)
 		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		line.add_child(text)
-		var tag = "Autosave" if entry.get("autosave", false) else "Import previous version" if entry.get("legacy", false) else "Slot %d" % entry.get("slot", 0)
+		var tag = "Autosave" if entry.get("autosave", false) else "Slot %d" % entry.get("slot", 0)
 		text.add_child(U.label(entry.name, 16, U.TEXT, true))
 		text.add_child(U.label("%s / Day %d" % [tag, entry.day], 11, U.MUTED))
 		var load_button = U.button("Load", func():
@@ -762,6 +841,7 @@ func _recruitment() -> void:
 		traits.tooltip_text = sim.Catalog.TRAITS[candidate.trait].description + "\n" + sim.Catalog.PERSONALITIES[candidate.personality].description
 		bio.add_child(traits)
 		bio.add_child(U.label(_money(sim.ROLES[role].salary) + "/day", 11, U.MUTED))
+		bio.add_child(U.label("A free bed is available" if sim.free_bed_id() != -1 else "No spare bed / rest at 40% recovery", 11, U.GOLD, true))
 		var hire = U.button("Hire " + _money(sim.ROLES[role].cost), func():
 			if sim.hire(role): _close_modal(); selected_person = sim.staff.back().id; _set_page("People")
 		, "plus")
@@ -782,6 +862,7 @@ func _statistics() -> void:
 	span.item_selected.connect(func(index): chart.horizon = [30, 90, 720][index]; chart.queue_redraw())
 	controls.add_child(span)
 	content.add_child(chart)
+	modal_refreshers.append(func(): chart.queue_redraw())
 	var legend = U.row(14)
 	content.add_child(legend)
 	for field in sim.FIELDS:
@@ -790,7 +871,7 @@ func _statistics() -> void:
 	content.add_child(U.label("Daily snapshots. Hover over the graph for values. Paper income counts accepted grants that day.", 11, U.MUTED, true))
 
 func _publication_result(result: Dictionary) -> void:
-	var content = _open_modal("Published" if result.accepted else "Referee decision", 720, sim.acknowledge_result)
+	var content = _open_modal("Published" if result.accepted else "Referee decision", 720, _after_review)
 	var color = U.ACCENT if result.accepted else U.GOLD
 	var identity = U.row()
 	content.add_child(identity)
@@ -803,7 +884,8 @@ func _publication_result(result: Dictionary) -> void:
 	content.add_child(U.label(result.feedback, 15, U.TEXT, true))
 	content.add_child(U.label("+%s / +%d impact" % [_money(result.grant), result.impact] if result.accepted else "75% of evidence returned; idea restored.", 19, color, true))
 	content.add_child(U.label("Acceptance estimate: %.0f%%. Time is paused." % (result.chance * 100), 12, U.MUTED))
-	content.add_child(U.button("Return to the lab", _close_modal, "back"))
+	content.add_child(U.button("Close / remain paused", _close_modal, "back"))
+	content.add_child(U.button("Resume simulation", _resume_from_feedback, "play"))
 
 func _journal_club() -> void:
 	if not sim.refresh_ideas(): return
@@ -829,26 +911,31 @@ func _discovery(idea: Dictionary) -> void:
 	content.add_child(field)
 	field.add_child(U.image(idea.field, Color(sim.FIELDS[idea.field].color), 25))
 	field.add_child(U.label(sim.FIELDS[idea.field].name, 16))
-	content.add_child(U.label("Potential award: %s / %d impact" % [_money(sim.JOURNALS[idea.kind].grant), sim.JOURNALS[idea.kind].impact], 16, color))
+	content.add_child(U.label("On publication: %s / +%d impact" % [_money(sim.JOURNALS[idea.kind].grant), sim.JOURNALS[idea.kind].impact], 16, color))
 	content.add_child(U.button("View paper ideas", func(): _close_modal(); _set_page("Papers"), "paper"))
 	# A short reveal uses opacity only; it doesn't hide costs or block input.
 	content.modulate.a = 0
 	create_tween().tween_property(content, "modulate:a", 1.0, 0.35)
 
 func _notebook_history() -> void:
-	var content = _open_modal("Lab notebook", 820)
+	var content = _open_modal("Lab notebook", 920)
+	var book = Notebook.new()
+	content.add_child(book)
 	var scroll = ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(760, 490)
-	content.add_child(scroll)
-	var entries = U.column(12)
+	scroll.custom_minimum_size = Vector2(800, 540)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	book.add_child(scroll)
+	var entries = U.column(16)
 	entries.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(entries)
 	for event in sim.log_entries:
-		entries.add_child(U.label("Day %d / %02d:00" % [event.day, event.get("hour", 0)], 10, U.MUTED))
-		entries.add_child(U.label(event.message, 14, U.TEXT, true))
+		var entry = U.column(6)
+		entries.add_child(entry)
+		entry.add_child(U.label("DAY %d  /  %02d:00" % [event.day, event.get("hour", 0)], 11, Notebook.FAINT))
+		entry.add_child(U.label(event.message, 15, Notebook.INK, true))
 
 func _help() -> void:
-	_info("Life in the North Annex", "Space pauses. A day lasts 48 seconds at 1x. Esc opens the pause menu.\n\nBUILD: experiments go in the upper rooms. Desks go in the office and need a free chair space below. Walls and corridors stay fixed.\n\nPEOPLE: click a portrait or a person on the floor. Drag routine boundaries, assign activity and choose a desk. Gold hours are Activity. Auto writes when there is a manuscript and studies otherwise.\n\nPAPERS: analyzed evidence must match the field. More committed evidence raises review odds. The writing banner explains missing hours or desks. Study earns points for discovering ideas.\n\nSAVE: use the pause menu for five named slots. Autosave is separate. Statistics records resources each midnight. Hover over icons, traits and controls for details.")
+	_info("Running the laboratory", "Space pauses or resumes; Esc closes a window or opens the pause menu. A day lasts 48 seconds at 1x. Browsing windows keeps time running. Referee decisions and program milestones pause with an explicit Resume button.\n\nPlace experiments in the upper labs, desks in the office, and beds along the sleeping area's upper wall. Assign each person a bed; bedless rest restores only 40% as much energy.\n\nIn People, assign daily rest, collection and analysis. Remaining gold hours run Activity. Auto writes when a manuscript needs work and studies otherwise.\n\nCommon papers need no impact. Commit matching evidence, then assign writing hours and a desk. More evidence improves acceptance odds.\n\nThe target icon opens your research program and all published papers. Its milestones use cumulative credit. The tree icon opens Development; impact unlocks technologies, then funds buy equipment upgrades and modules. Every upgrade shows its effect before purchase.")
 
 func _floor_clicked(cell: Vector2i) -> void:
 	if build_kind != "":
@@ -875,7 +962,7 @@ func _cancel_build() -> void:
 
 func _toggle_pause() -> void:
 	if not session_active: return
-	if not sim.pending_result.is_empty(): _publication_result(sim.pending_result); return
+	if not sim.pending_result.is_empty() or not sim.pending_milestone.is_empty(): return
 	sim.paused = not sim.paused
 	_refresh()
 
@@ -896,13 +983,146 @@ func _refresh() -> void:
 	impact_label.tooltip_text = "%d available impact\n%d lifetime impact\n%d published papers" % [sim.prestige, sim.lifetime_impact, sim.published]
 	headline_label.text = sim.lab_name
 	pause_button.icon = U.icon("play" if sim.paused else "pause")
-	state_label.text = "PAUSED" if sim.paused else "%d× / LIVE" % sim.speed
+	pause_button.text = "PAUSED" if sim.paused else "Pause"
+	pause_button.disabled = not sim.pending_result.is_empty() or not sim.pending_milestone.is_empty()
+	pause_button.add_theme_stylebox_override("normal", U.box(Color("66513a") if sim.paused else U.CARD, U.GOLD if sim.paused else U.LINE, 8))
+	pause_button.add_theme_stylebox_override("disabled", U.box(Color("66513a"), U.GOLD, 8))
+	state_label.text = "PAUSED / SPACE TO RESUME" if sim.paused else "%d× / RUNNING" % sim.speed
+	state_label.add_theme_color_override("font_color", U.GOLD if sim.paused else U.MUTED)
 	for control in pause_button.get_parent().get_children():
 		if control.has_meta("speed"): control.add_theme_stylebox_override("normal", U.box(Color("46534d") if control.get_meta("speed") == sim.speed else U.CARD, U.LINE, 9))
 	for field in data_labels: data_labels[field].text = "%.1f raw / %.1f evidence" % [sim.raw_by_field[field], sim.analyzed_by_field[field]]
 	var messages = PackedStringArray()
 	for event in sim.log_entries.slice(0, 3): messages.append("D%d / %02d:00   %s" % [event.day, event.get("hour", 0), event.message])
 	event_label.text = "\n".join(messages)
-	hint_label.text = "Placing %s / click to build / Esc to cancel" % ("a desk" if build_kind == "desk" else sim.EQUIPMENT[build_kind].name) if build_kind != "" else "Click a person or workstation to inspect it."
+	hint_label.text = "Placing %s / click to build / Esc to cancel" % ("a bed" if build_kind == "bed" else "a desk" if build_kind == "desk" else sim.EQUIPMENT[build_kind].name) if build_kind != "" else "Click a person or workstation to inspect it."
 	for refresh in refreshers: refresh.call()
+	for refresh in modal_refreshers.duplicate(): if refresh.is_valid(): refresh.call()
 	floor_view.queue_redraw()
+
+func _scroll_body(parent: Control, width: int, height: int) -> VBoxContainer:
+	var scroll = ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(width, height)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	parent.add_child(scroll)
+	var body = U.column(12)
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(body)
+	return body
+
+func _development() -> void:
+	var content = _open_modal("Development", 1120)
+	var balance = U.label("", 13, U.GOLD)
+	content.add_child(balance)
+	modal_refreshers.append(func(): balance.text = "%d impact available / technologies unlock purchases; funds pay for equipment" % sim.prestige)
+	var body = _scroll_body(content, 1060, 580)
+	var tree = TechTree.new()
+	tree.simulation = sim
+	body.add_child(tree)
+	_refresh()
+
+func _program_window() -> void:
+	var content = _open_modal("Research program", 1000)
+	if sim.research_program == "":
+		content.add_child(U.label("Choose the final goal for this run. This choice is permanent; qualifying publications count cumulatively.", 14, U.MUTED, true))
+		for key in sim.Programs.PROGRAMS:
+			var spec = sim.Programs.PROGRAMS[key]
+			content.add_child(U.label(spec.description, 13, U.MUTED, true))
+			content.add_child(U.button(spec.name, func(): sim.choose_program(key); _program_window(), spec.field))
+		return
+	var spec = sim.Programs.PROGRAMS[sim.research_program]
+	var head = U.row()
+	content.add_child(head)
+	head.add_child(U.image(spec.field, Color(sim.FIELDS[spec.field].color), 30))
+	head.add_child(U.label(spec.name, 24))
+	U.space(head)
+	head.add_child(U.button("Published papers", _publication_archive, "paper"))
+	content.add_child(U.label("Final discovery: " + spec.discovery, 14, U.GOLD))
+	content.add_child(U.label("Cumulative credit. Papers are never spent. Higher tiers count toward lower-tier requirements; mixed papers count in both fields.", 12, U.MUTED, true))
+	var body = _scroll_body(content, 940, 450)
+	var index = 0
+	for stage in sim.Programs.stages(sim.research_program):
+		var number = index
+		var card = U.panel(body, Color("303c36") if number < sim.program_level else U.CARD)
+		card.add_child(U.label("%d. %s%s" % [number + 1, stage.name, " / COMPLETE" if number < sim.program_level else " / CURRENT" if number == sim.program_level else ""], 17, U.ACCENT if number < sim.program_level else U.TEXT))
+		card.add_child(U.label(stage.description, 12, U.MUTED, true))
+		for requirement in stage.requirements:
+			var line = U.row()
+			card.add_child(line)
+			var count = sim.Programs.count(sim.history, requirement)
+			line.add_child(U.image("check" if count >= requirement.count else "paper", U.ACCENT if count >= requirement.count else U.MUTED, 17))
+			line.add_child(U.label(sim.Programs.requirement_text(requirement), 13, U.TEXT, true))
+			U.space(line)
+			line.add_child(U.label("%d / %d" % [count, requirement.count], 13, U.ACCENT))
+		index += 1
+	var discovery = U.button("Develop final manuscript / 12 study", func(): sim.develop_discovery(), "legendary")
+	content.add_child(discovery)
+	modal_refreshers.append(func():
+		var reason = sim.discovery_reason()
+		discovery.disabled = reason != ""
+		discovery.text = reason if reason != "" else "Develop final manuscript / 12 study"
+	)
+	_refresh()
+
+func _publication_archive() -> void:
+	var content = _open_modal("Published papers", 1000)
+	var filters = U.row(10)
+	content.add_child(filters)
+	filters.add_child(U.button("Program progress", _program_window, "back"))
+	U.space(filters)
+	var fields = {"any": "All fields"}
+	for field in sim.FIELDS: fields[field] = sim.FIELDS[field].name
+	_choice(filters, "", fields, archive_field, func(value): archive_field = value; _publication_archive())
+	_choice(filters, "", {"any": "All tiers", "letter": "Common", "article": "Rare", "breakthrough": "Legendary"}, archive_tier, func(value): archive_tier = value; _publication_archive())
+	var body = _scroll_body(content, 940, 530)
+	var shown = 0
+	for paper in sim.history:
+		if not paper.accepted: continue
+		if archive_field != "any" and archive_field not in [paper.field, paper.get("secondary", "")]: continue
+		if archive_tier != "any" and paper.kind != archive_tier: continue
+		shown += 1
+		var tier = sim.rarity(paper.kind)
+		var card = U.panel(body, U.CARD, Color(tier.color).darkened(0.4))
+		var line = U.row()
+		card.add_child(line)
+		line.add_child(U.image(tier.icon, Color(tier.color), 22))
+		line.add_child(U.label(tier.name + " / Day %d" % paper.day, 12, Color(tier.color)))
+		U.space(line)
+		for field in [paper.field, paper.get("secondary", "")]:
+			if field == "": continue
+			line.add_child(U.image(field, Color(sim.FIELDS[field].color), 20))
+			line.add_child(U.label(sim.FIELDS[field].name, 12))
+		card.add_child(U.label(paper.title, 18, U.TEXT, true))
+		card.add_child(U.label("Awarded %s / +%d impact" % [_money(paper.grant), paper.impact], 12, U.MUTED))
+		var contributions = PackedStringArray()
+		var level = 1
+		for stage in sim.Programs.stages(sim.research_program):
+			for requirement in stage.requirements:
+				if sim.Programs.matches(paper, requirement): contributions.append(str(level)); break
+			level += 1
+		card.add_child(U.label("Counts toward program stages " + ", ".join(contributions), 12, U.ACCENT, true))
+	if shown == 0: body.add_child(U.label("No published papers match these filters.", 15, U.MUTED))
+
+func _after_review() -> void:
+	sim.acknowledge_result()
+	if not sim.pending_milestone.is_empty(): call_deferred("_show_pending_milestone")
+
+func _show_pending_milestone() -> void:
+	if session_active and not sim.pending_milestone.is_empty(): _milestone()
+
+func _resume_from_feedback() -> void:
+	_close_modal()
+	if sim.pending_result.is_empty() and sim.pending_milestone.is_empty(): sim.paused = false
+	_refresh()
+
+func _milestone() -> void:
+	var milestone = sim.pending_milestone.duplicate(true)
+	if milestone.is_empty(): return
+	var victory = milestone.victory
+	var spec = sim.Programs.PROGRAMS[sim.research_program]
+	var content = _open_modal("Major discovery" if victory else "Program milestone", 800, sim.acknowledge_milestone)
+	content.add_child(U.image("legendary" if victory else "program", U.GOLD, 60))
+	content.add_child(U.label(spec.discovery if victory else sim.Programs.stages(sim.research_program)[int(milestone.to) - 1].name + " complete", 25, U.GOLD, true))
+	content.add_child(U.label("Your research program is complete. The laboratory can continue publishing and developing." if victory else "Stage %d of 4 completed. Earlier publications continue to count toward the next milestone." % milestone.to, 15, U.TEXT, true))
+	content.add_child(U.button("Review program / remain paused", func(): _close_modal(); _program_window(), "program"))
+	content.add_child(U.button("Continue simulation", _resume_from_feedback, "play"))

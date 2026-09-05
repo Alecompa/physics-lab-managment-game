@@ -56,6 +56,9 @@ func center(cell: Vector2) -> Vector2:
 	return floor_origin + (cell + Vector2(0.5, 0.5)) * tile
 
 func person_screen_position(person: Dictionary) -> Vector2:
+	if person.get("working", false) and person.task == "rest" and trails.get(person.id, []).is_empty():
+		var bed = simulation.bed_by_id(person.get("bed", -1))
+		if not bed.is_empty(): return center(Vector2(bed.x, bed.y)) + Vector2(0, tile * 0.1)
 	return center(person_positions.get(person.id, Vector2(person.x, person.y))) + Vector2(3 if int(person.id) % 2 else -3, 0)
 
 func cell_at(point: Vector2) -> Vector2i:
@@ -68,7 +71,7 @@ func _gui_input(event: InputEvent) -> void:
 		if build_kind != "": tooltip_text = simulation.placement_error(build_kind, hovered)
 		else:
 			var object = simulation.object_at(hovered)
-			if not object.is_empty(): tooltip_text = "Desk #%d" % object.id if object.kind == "desk" else "%s / L%d / %.0f%% condition" % [simulation.EQUIPMENT[object.kind].name, object.level, object.condition]
+			if not object.is_empty(): tooltip_text = "%s #%d" % [object.kind.capitalize(), object.id] if object.kind in ["bed", "desk"] else "%s / L%d / %.0f%% condition" % [simulation.EQUIPMENT[object.kind].name, object.level, object.condition]
 			for person in simulation.staff:
 				if person_screen_position(person).distance_to(event.position) < 15: tooltip_text = "%s\n%s\nEnergy %.0f%%" % [person.name, person.status, person.energy]
 	if event is InputEventMouseButton and event.pressed:
@@ -113,26 +116,23 @@ func _draw() -> void:
 			draw_line(p, p + Vector2(0, tile), Color("f3efe0"), 3)
 			draw_line(p + Vector2(tile, 0), p + Vector2(tile, tile), Color("f3efe0"), 3)
 			draw_arc(p, tile * 0.8, 0, PI * 0.5, 12, Color("7d928b"), 1)
-	# Fixed library, couches, coffee corner and plants.
-	for x in [13, 14, 15, 16, 17]:
-		var p = floor_origin + Vector2(x, 9) * tile
-		draw_rect(Rect2(p + Vector2(2, 4), Vector2(tile - 4, tile * 0.52)), Color("766454"))
-		for book in range(5): draw_rect(Rect2(p + Vector2(6 + book * tile * 0.14, 8), Vector2(tile * 0.1, tile * 0.32)), [Color("899d8a"), Color("b7a78c"), Color("8195a6")][book % 3])
-	for x in [13, 16]:
-		var p = floor_origin + Vector2(x, 10) * tile
-		draw_style_box(LabUI.box(Color("788c7d"), Color("627165"), 3, 5), Rect2(p + Vector2(2, 3), Vector2(tile * 2 - 4, tile - 6)))
-		draw_line(p + Vector2(tile, 5), p + Vector2(tile, tile - 5), Color("a1b09b"), 1)
+	# Coffee table and seats remain available for less effective bedless rest.
+	var coffee = center(Vector2(12, 12))
+	draw_rect(Rect2(coffee - Vector2.ONE * tile * 0.3, Vector2.ONE * tile * 0.6), Color("87765d"))
+	draw_circle(coffee, tile * 0.12, Color("e4dfd2"))
+	for seat in Layout.REST_SEATS: draw_circle(center(Vector2(seat)), tile * 0.22, Color("788c7d"))
+	for bed in simulation.beds: draw_bed(bed)
 	for cell in [Vector2(1, 6), Vector2(18, 7), Vector2(18, 12)]:
 		var p = center(cell)
 		draw_circle(p, tile * 0.18, Color("817364"))
 		for angle in range(5): draw_circle(p + Vector2.from_angle(angle * 1.25) * tile * 0.11, tile * 0.12, Color("667e66"))
 	var label_color = Color("64736f")
-	for item in [[Vector2(1, 0), "OPTICS LAB"], [Vector2(12, 0), "MEASUREMENT LAB"], [Vector2(1, 13), "OFFICE"], [Vector2(12, 13), "COMMON ROOM"]]:
+	for item in [[Vector2(1, 0), "OPTICS LAB"], [Vector2(12, 0), "MEASUREMENT LAB"], [Vector2(1, 13), "OFFICE"], [Vector2(12, 13), "SLEEPING AREA"]]:
 		var label_position = center(item[0]) + Vector2(0, 4)
 		var label_width = font.get_string_size(item[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
 		draw_rect(Rect2(label_position - Vector2(4, 12), Vector2(label_width + 8, 16)), Color("4a535a"))
 		text_at(label_position, item[1], Color("dce0d7"), 10)
-	text_at(center(Vector2(5, 7)), "NORTH ANNEX   /   01", label_color, 10)
+
 	for desk in simulation.desks: draw_desk(desk)
 	for experiment in simulation.experiments: draw_experiment(experiment)
 	if build_kind != "" and Layout.inside(hovered):
@@ -191,22 +191,37 @@ func draw_experiment(experiment: Dictionary) -> void:
 		draw_circle(c + Vector2(sin(animation_time * 2) * tile * 0.25, -tile * 0.8 - pulse * 12), 2.5, Color(color, 1 - pulse))
 	draw_circle(rect.end - Vector2(7, 7), 3, color if active else Color("404e51"))
 	if experiment.condition < 55: draw_texture_rect(LabUI.icon("warning"), Rect2(rect.position + Vector2(2, 2), Vector2(15, 15)), false, Color("d5ae73"))
-	if experiment.id == selected_id and selected_kind != "desk": draw_rect(Rect2(p, Vector2.ONE * tile * 2), Color("d6b45f"), false, 2)
+	for index in range(experiment.get("modules", []).size()):
+		var key = experiment.modules[index]
+		var q = rect.position + Vector2(index * 21 + 4, rect.size.y - 19)
+		draw_style_box(LabUI.box(Color("283d45"), LabUI.ACCENT, 0, 2), Rect2(q, Vector2(18, 15)))
+		draw_texture_rect(LabUI.icon("clock" if key == "accelerator" else key), Rect2(q + Vector2(2, 1), Vector2(13, 13)), false, LabUI.ACCENT if key == "accelerator" else Color(simulation.FIELDS[key].color))
+	if experiment.id == selected_id and selected_kind not in ["desk", "bed"]: draw_rect(Rect2(p, Vector2.ONE * tile * 2), Color("d6b45f"), false, 2)
 
 func draw_person(person: Dictionary) -> void:
 	var p = person_screen_position(person)
 	var walking = trails.has(person.id) and not trails[person.id].is_empty()
 	var phase = animation_time * 5 + person.id
 	var size_value = clampf(tile / 44, 0.7, 1.1)
-	var skin = [Color("d7b8a0"), Color("b78c6b"), Color("8b6550"), Color("e0c9b5")][absi((person.name + person.specialty).hash()) % 4]
+	var look = StaffAppearance.of(person)
+	var skin = look.skin
+	var sleeping = person.task == "rest" and person.get("working", false) and person.get("bed", -1) != -1 and not walking
+	if sleeping:
+		draw_circle(p, 4.5 * size_value, skin)
+		if look.style != 4: draw_arc(p - Vector2(0, 1), 4.5 * size_value, PI, TAU, 10, look.hair, 2)
+		draw_texture_rect(LabUI.icon("rest"), Rect2(p + Vector2(8, -12 + sin(animation_time) * 2), Vector2(13, 13)), false, Color("4d655a"))
+		return
 	if person.id == selected_person: draw_arc(p, 12 * size_value, 0, TAU, 24, Color("5b7568"), 1.5)
 	draw_circle(p + Vector2(1, 6), 7 * size_value, Color(0.1, 0.15, 0.15, 0.25))
 	var step = sin(phase) * 3 if walking and not simulation.paused else 0.0
 	draw_line(p + Vector2(-3, 2), p + Vector2(-3, 9 + step) * size_value, Color("48545a"), 3 * size_value)
 	draw_line(p + Vector2(3, 2), p + Vector2(3, 9 - step) * size_value, Color("48545a"), 3 * size_value)
-	draw_circle(p, 6 * size_value, Color("e4e7de"))
+	draw_circle(p, (6.5 if look.wide else 5.5) * size_value, Color("e4e7de") if person.role == "researcher" else look.shirt)
 	draw_circle(p - Vector2(0, 6) * size_value, 4.2 * size_value, skin)
-	draw_arc(p - Vector2(0, 7) * size_value, 4 * size_value, PI, TAU, 10, Color("514942"), 2)
+	if look.style != 4: draw_arc(p - Vector2(0, 7) * size_value, 4 * size_value, PI, TAU, 10, look.hair, 3 if look.style == 1 else 2)
+	if look.style in [2, 3]: draw_circle(p + Vector2(4, -6) * size_value, 3 * size_value, look.hair)
+	if look.glasses: draw_line(p + Vector2(-3, -5) * size_value, p + Vector2(3, -5) * size_value, Color("36414b"), 1.4)
+	if look.beard: draw_arc(p - Vector2(0, 5) * size_value, 3 * size_value, 0, PI, 8, look.hair, 1.5)
 	draw_circle(p + Vector2(4, 1), 1.8, Color(simulation.FIELDS[person.specialty].color))
 	if person.get("working", false) and not walking:
 		var symbol = "rest" if person.task == "rest" else "study" if person.task == "study" else "write" if person.task == "write" else ""
@@ -214,3 +229,15 @@ func draw_person(person: Dictionary) -> void:
 			var offset = sin(animation_time * 1.5 + person.id) * 1.5
 			draw_texture_rect(LabUI.icon(symbol), Rect2(p + Vector2(7, -21 + offset), Vector2(12, 12)), false, Color("4d655a"))
 	if person.energy < 25: draw_circle(p + Vector2(8, -7), 3, Color("c08472"))
+
+func draw_bed(bed: Dictionary) -> void:
+	var p = floor_origin + Vector2(bed.x, bed.y) * tile
+	var rect = Rect2(p + Vector2(3, 3), Vector2(tile - 6, tile * 2 - 6))
+	draw_style_box(LabUI.box(Color("ede6d3"), Color("8b877c"), 0, 4), rect)
+	var blanket = Color("82999b")
+	for person in simulation.staff:
+		if person.get("bed", -1) == bed.id: blanket = StaffAppearance.of(person).shirt
+	draw_rect(Rect2(p + Vector2(5, tile * 0.7), Vector2(tile - 10, tile * 1.1)), blanket)
+	draw_style_box(LabUI.box(Color("f6efdd"), Color("c9c1ad"), 0, 3), Rect2(p + Vector2(7, 8), Vector2(tile - 14, tile * 0.45)))
+	text_at(p + Vector2(5, tile * 2 - 8), str(int(bed.id)), Color("e6e6d9"), 10)
+	if bed.id == selected_id and selected_kind == "bed": draw_rect(Rect2(p, Vector2(tile, tile * 2)), LabUI.GOLD, false, 2)

@@ -24,13 +24,24 @@ const JOURNALS = {
 	"breakthrough": {"name": "High-impact paper", "tag": "FLAGSHIP PAPER", "data": 110.0, "work": 55.0, "grant": 22000.0, "impact": 12, "prestige": 7, "chance": 0.35, "review": 72}
 }
 const UPGRADES = {
-	"journal_club": {"name": "Journal club", "cost": 2, "requires": "", "description": "Spend 12 study points to refresh the entire idea board. Normal study still creates individual ideas for 8 points."},
-	"nuclear_lab": {"name": "Nuclear instrumentation", "cost": 3, "requires": "", "description": "Permanently unlock particle detector construction."},
-	"mixed_mode": {"name": "Mixed-mode acquisition", "cost": 3, "requires": "", "description": "Level 2 experiments produce 75% primary and 25% secondary data. Level 3 uses a 60/40 split. Enables cross-field ideas."},
-	"compute": {"name": "Analysis cluster", "cost": 4, "requires": "", "description": "All analysis work is 25% faster, for every field."},
-	"quantum_lab": {"name": "Quantum instrumentation", "cost": 6, "requires": "mixed_mode", "description": "Permanently unlock quantum rig construction. Requires mixed-mode acquisition."},
-	"lounge": {"name": "Staff common room", "cost": 3, "requires": "", "description": "Rest restores 10 energy per hour instead of 7."},
-	"review_support": {"name": "Internal peer review", "cost": 5, "requires": "journal_club", "description": "Adds 8 percentage points to acceptance chances of newly started papers, up to 97%."}
+	"precision": {"name": "Precision instrumentation", "cost": 2, "requires": "", "branch": "instrumentation", "description": "Unlock level 2 experiments: +50% base capacity. Purchase each upgrade with funds."},
+	"module_slots": {"name": "Modular instruments", "cost": 3, "requires": "precision", "branch": "instrumentation", "description": "Unlock two module slots per experiment and the acquisition accelerator."},
+	"mixed_mode": {"name": "Mixed-mode acquisition", "cost": 3, "requires": "module_slots", "branch": "instrumentation", "description": "Unlock extra data-channel modules and mixed-field paper ideas. Existing level 2/3 instruments also gain their native secondary channel."},
+	"advanced_instruments": {"name": "Advanced instrumentation", "cost": 6, "requires": "mixed_mode", "branch": "instrumentation", "description": "Unlock level 3 experiments: double base capacity. Purchase each upgrade with funds."},
+	"nuclear_lab": {"name": "Nuclear instrumentation", "cost": 3, "requires": "precision", "branch": "instrumentation", "description": "Unlock particle detectors. Primary data: Nuclear. Construction costs $8,200."},
+	"quantum_lab": {"name": "Quantum instrumentation", "cost": 6, "requires": "mixed_mode", "branch": "instrumentation", "description": "Unlock quantum rigs. Primary data: Quantum. Construction costs $14,500."},
+	"desk_systems": {"name": "Workstation systems", "cost": 2, "requires": "", "branch": "computation", "description": "Unlock level 2 desks: +15% analysis, writing and study for their seated user. $700 per desk."},
+	"compute": {"name": "Analysis cluster", "cost": 4, "requires": "desk_systems", "branch": "computation", "description": "+25% analysis at every desk. Also unlock level 3 desks: +30% desk productivity. $1,400 per desk."},
+	"journal_club": {"name": "Journal club", "cost": 2, "requires": "desk_systems", "branch": "computation", "description": "Refresh all six paper ideas for 12 study points. Individual discoveries still cost 8 points."},
+	"review_support": {"name": "Internal peer review", "cost": 5, "requires": "journal_club", "branch": "computation", "description": "+8 acceptance percentage points for new manuscripts, capped at 97%."},
+	"lounge": {"name": "Rest facilities", "cost": 3, "requires": "compute", "branch": "computation", "description": "Assigned beds restore 10 energy/hour instead of 7. Bedless rest remains 40% as effective."}
+}
+const MODULES = {
+	"accelerator": {"name": "Acquisition accelerator", "cost": 1400, "unlock": "module_slots", "field": "", "description": "+25% experiment capacity and operator acquisition speed."},
+	"nuclear": {"name": "Nuclear channel", "cost": 1800, "unlock": "mixed_mode", "field": "nuclear", "description": "Add Nuclear data equal to 20% of the experiment's base output. Existing channels retain their yield."},
+	"quantum": {"name": "Quantum channel", "cost": 1800, "unlock": "mixed_mode", "field": "quantum", "description": "Add Quantum data equal to 20% of the experiment's base output. Existing channels retain their yield."},
+	"materials": {"name": "Materials channel", "cost": 1800, "unlock": "mixed_mode", "field": "materials", "description": "Add Materials data equal to 20% of the experiment's base output. Existing channels retain their yield."},
+	"optics": {"name": "Optics channel", "cost": 1800, "unlock": "mixed_mode", "field": "optics", "description": "Add Optics data equal to 20% of the experiment's base output. Existing channels retain their yield."}
 }
 const TRAITS = {
 	"meticulous": {"name": "Meticulous", "description": "+20% analysis, -20% collection", "analyze": 1.2, "acquire": 0.8},

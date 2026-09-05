@@ -1,150 +1,111 @@
-# Iteration 3: a physical lab and clearer management
+# Iteration 4 design and playtest notes
 
-## Implemented scope
+## Scope
 
-The third iteration keeps the typed-data and publication loop, adds a fixed physical laboratory, and rebuilds the interface around the map. The fourth field remains optics. Research trees, map expansion, and new long-term progression are deliberately deferred.
+This iteration adds long-term research programs, a development tree, equipment modules and desk upgrades, individually assigned beds, more varied staff appearances, a literal notebook, and clearer time controls. It retains the 48-second day, base publication rules, and evidence commitments.
 
-A lab day lasts 48 real seconds at 1x, twice the previous duration. Each simulation tick is one lab hour. Walking covers up to four tiles per lab hour, rendered at two tiles per real second at 1x. Publication decisions pause the clock and require acknowledgement; closing the result leaves time paused.
+The selected design decisions are cumulative publication credit, modules installed in equipment slots with visible attachments, and sleeping space within the existing building. Save compatibility was explicitly dropped. Only version-4 saves are supported.
 
-## Physical layout
+## Research programs
 
-The building is 20×14 tiles. Two upper rooms hold 2×2 experiments. The lower office holds 2×1 desks with a chair immediately below. The lower common room contains fixed seating and a library. Walls, windows, doors, and corridors remain fixed for this iteration.
+Three programs share four milestone levels, with different principal fields and final manuscripts:
 
-A hypothetical construction grid checks every experiment's interaction perimeter and every chair before charging for placement. New furniture cannot occupy a chair or cut the corridor route to an existing workplace. Desks cost $600 and return $210 when removed. Removing an assigned desk returns its users to automatic desk selection.
-
-Each desk is reserved by one person per simulation hour, including travel toward it. Explicitly assigned people wait when their desk is busy; automatic assignment chooses a nearby free reachable chair. Priority rotates each hour. People can pass through one another. Furniture blocks pathfinding, but moving people do not.
-
-## Daily routines and movement
-
-Each person has three editable blocks: rest, collection, and analysis. The remainder of the 24-hour budget goes to a chosen activity. These blocks occur consecutively. Editing one block preserves its requested size and trims excess from other work blocks, then rest. A night owl's schedule starts eight hours later.
-
-Activity can be Auto, Write, Study, or Maintain. Auto writes during an active manuscript's writing stage and studies at other times. All roles can collect and analyze. Researchers write and study faster than other roles. Technicians start with a maintenance routine.
-
-Each agent has a position, destination, route, status and energy. A grid path routes around equipment to an adjacent work position or a desk. Staff walk up to four tiles per lab hour; the travel fraction reduces the work completed that hour. Rest requires reaching a common-room seat. Analysis, writing and study require a physical desk chair.
-
-Desk use is exclusive within an hour. Up to two operators work at an experiment in an hour, sharing its hourly capacity. Automatic collection chooses the closest reachable matching experiment; the player can assign another station to spread the team. Automatic maintenance chooses the most damaged reachable experiment, with distance breaking close choices. Staff assigned to an unavailable or enclosed experiment wait and show why.
-
-Work drains two energy per hour. Rest recovers seven energy per stationary hour, or ten with the common-room upgrade. Work efficiency scales from 40% to 100% with energy. Energy below eight overrides the schedule with emergency rest.
-
-## Traits and recruitment
-
-Each candidate preview shows a specialty, trait and personality. Hiring preserves the previewed identity and attributes. All attributes and candidates are saved.
-
-Specialties add 25% to relevant collection, analysis, writing and study. A mixed experiment uses its primary field for the collection specialty bonus.
-
-| Trait | Bonus | Drawback |
+| Program | Principal field | Final evidence fields |
 | --- | --- | --- |
-| Meticulous | +20% analysis | -20% collection |
-| Inventive | +35% study | -15% writing |
-| Practical | +20% collection | -15% analysis |
-| Diligent | +20% writing | -20% study |
+| Dark matter searches | Nuclear | Nuclear + Quantum |
+| Fault-tolerant quantum computing | Quantum | Quantum + Optics |
+| Unconventional superconductivity | Materials | Materials + Quantum |
 
-| Personality | Behavior |
+The program is selected at the beginning of the run and cannot be changed. Qualifying papers count cumulatively. The simulation counts each publication once within a criterion; the same paper may satisfy complementary criteria. For example, one mixed Nuclear/Quantum legendary counts toward total papers, Nuclear papers, mixed Nuclear papers, and Nuclear legendary papers.
+
+| Level | Requirements |
 | --- | --- |
-| Early bird | +10% work before noon |
-| Night owl | Routine shifted eight hours; +10% work after 16:00 |
-| Sociable | +10% work when another person is within 1.5 tiles |
-| Solitary | +10% work alone; -10% near a colleague |
+| Foundations | 2 accepted papers; at least 1 Optics paper |
+| Focused studies | 5 accepted papers; 2 principal-field papers; 1 rare-or-legendary principal-field paper |
+| Independent evidence | 8 accepted papers; 2 mixed papers involving the principal field; 1 legendary involving it |
+| Major discovery | 10 accepted papers; 2 legendary papers involving the principal field; accepted program-specific final manuscript |
 
-## Typed evidence and experiments
+Early milestones are reachable using the starting optical bench. Spending impact does not reduce publication credit or lifetime reputation. Rejected papers give no credit. Programs and the archive have their own window, accessed through the target icon.
 
-Raw and analyzed evidence are separate dictionaries for nuclear, quantum, materials and optics. Analysis preserves type and quantity. The Any assignment prioritizes raw data in the person's specialty, then an available field with the largest stock. One field is analyzed per person per hour.
+At level three, the program window offers a guaranteed final manuscript for 12 study points and one free idea slot. It is a legendary paper with the program's fixed field pair and title, using ordinary evidence, writing and review rules. Rejection or shelving preserves its program identity so a retry remains possible. A new final manuscript cannot be created while one is already on the board or active. Completing the program produces a victory popup and allows continued play.
 
-| Experiment | Cost | Capacity per 24 staffed hours | Upkeep/day | Fields |
-| --- | --- | --- | --- | --- |
-| Optical bench | $2,400 | 18 | $12 | Optics, then quantum |
-| Materials chamber | $4,800 | 24 | $20 | Materials, then optics |
-| Particle detector | $8,200 | 33 | $30 | Nuclear, then materials |
-| Quantum rig | $14,500 | 45 | $44 | Quantum, then nuclear |
+All publication decisions are retained; the archive displays accepted papers with both fields, tier, title, date, rewards, and matching milestone stages. Field filters match either field. The previous 40-entry history limit is removed.
 
-Equipment capacity is an hourly limit, derived by dividing the displayed daily capacity by 24. Actual output depends on staffed hours, travel, operator performance and condition.
+## Development tree
 
-Level upgrades add 50% of base capacity per level, up to level three. Condition multiplies capacity and falls by 0.45 points per day, to a floor of 35%. Technician maintenance restores 0.8 condition points per full work hour at the chosen station, before work modifiers. Manual service still costs $250.
+Technologies cost spendable impact; purchases cost funds. The two branches are connected visually, with effects permanently visible.
 
-After mixed-mode acquisition is unlocked, level 2 equipment produces a 75/25 primary/secondary split and level 3 produces 60/40. Before the unlock, all levels produce the primary type only.
-
-## Ideas and peer review
-
-The board holds up to six ideas. Letter, article and high-impact papers are presented as Common, Rare and Legendary. Random tier draws use 55/30/15 weights with a legendary guaranteed on the eighth draw since the last legendary. The discovery counter is saved. Fixed starter cards and journal club’s guaranteed basic cards do not consume these draws. Appearance has no impact gate; manuscript eligibility retains the existing two/seven lifetime-impact requirements. Research-route gating is deferred.
-
-Each idea has a field, tier and flavor title. Starting ideas include a letter in each field and an optics article. Idea generation costs eight study points and favors installed fields. A journal-club refresh costs twelve points, replaces the board, and guarantees a letter for each installed field while space permits. It does not change the active manuscript. Discarding an idea frees a slot.
-
-Researchers earn 0.35 study points per stationary work hour before modifiers; other roles earn 0.12. Study points accrue only during scheduled Study activity or Auto activity when no manuscript needs writing. Ideas do not appear for free simply because time passes.
-
-| Tier | Minimum data | Base writing | Base acceptance | Review time | Grant | Impact | Lifetime impact required |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Letter | 18 | 10 | 62% | 24 hours | $2,600 | 2 | 0 |
-| Article | 48 | 26 | 48% | 48 hours | $8,200 | 5 | 2 |
-| High-impact paper | 110 | 55 | 35% | 72 hours | $22,000 | 12 | 7 |
-
-The evidence slider runs from 100% to 200% of the minimum. Each additional 100% adds 32 percentage points to acceptance probability and 20% to writing work. Internal peer review adds another eight percentage points, with a 97% ceiling. Probabilities are shown before the player commits anything.
-
-After mixed-mode acquisition, newly generated advanced ideas may require 75% primary and 25% secondary evidence. The UI displays rounded costs for each type. All costs are paid when writing starts.
-
-Researchers write 0.3 work per stationary hour before modifiers; other staff write 0.12. Once enough work is complete, the manuscript enters review. Referee time passes independently of staff activity. Submitted manuscripts cannot be shelved. Before submission, shelving returns the exact dataset and idea while discarding writing progress.
-
-Acceptance pays the tier's grant and adds both available and lifetime impact. Rejection pays nothing, returns 75% of each committed type, and restores the idea for another attempt. If the idea board is full, its newest idea is replaced by the returned manuscript idea. This keeps failure recoverable without giving back all the resources.
-
-The review random draw is fixed when writing starts and saved with the manuscript. Saving and loading an active paper does not reroll it. Pending decisions, titles and feedback also survive loading.
-
-## Permanent development
-
-| Development | Impact cost | Requirement | Effect |
+| Technology | Impact | Prerequisite | Effect |
 | --- | --- | --- | --- |
-| Journal club | 2 | None | Full idea-board refresh for 12 study points |
-| Nuclear instrumentation | 3 | None | Unlock particle detector construction |
-| Mixed-mode acquisition | 3 | None | Level 2+ secondary data and new cross-field ideas |
-| Analysis cluster | 4 | None | +25% actual analysis output |
-| Quantum instrumentation | 6 | Mixed-mode acquisition | Unlock quantum rig construction |
-| Staff common room | 3 | None | Rest recovery rises from 7 to 10 energy/hour |
-| Internal peer review | 5 | Journal club | +8 acceptance percentage points for newly started papers |
+| Precision instrumentation | 2 | None | Permit purchased experiment level 2 |
+| Modular instruments | 3 | Precision | Two module slots and acquisition accelerator |
+| Mixed-mode acquisition | 3 | Modular instruments | Native secondary channels, field modules and mixed paper ideas |
+| Advanced instrumentation | 6 | Mixed-mode | Permit purchased experiment level 3 |
+| Nuclear instrumentation | 3 | Precision | Permit particle detectors |
+| Quantum instrumentation | 6 | Mixed-mode | Permit quantum rigs |
+| Workstation systems | 2 | None | Permit purchased desk level 2 |
+| Analysis cluster | 4 | Workstation systems | +25% global analysis and permit desk level 3 |
+| Journal club | 2 | Workstation systems | Board refresh for 12 study points |
+| Internal peer review | 5 | Journal club | +8 acceptance percentage points, capped at 97% |
+| Rest facilities | 3 | Analysis cluster | Assigned bed recovery rises from 7 to 10 energy/hour |
 
-Impact spending is separate from lifetime reputation. University support is $60 plus $3 per lifetime impact each day. Hiring fees, wages and emergency support retain the previous prototype's values. A funding shortfall adds $4,000, spends up to two available impact and pauses the lab. Unlocks remain permanent.
+Experiments remain capped at level three. Each level adds 50% of base capacity; condition multiplies actual capacity. Upgrade cost is 65% of base equipment price times current level. Upgrading restores condition. The inspector previews capacity, data channels, upkeep, price, and the exact technology gate.
 
-## Flavor and activity feedback
+Native mixed channels remain 75/25 at level 2 and 60/40 at level 3 after mixed-mode technology. Module effects are additive:
 
-The notebook attempts a contextual event every 8–17 lab hours. It selects from actual working activities, energy below 30, equipment condition below 55%, and work in a matching specialty. The same template is excluded from the next 24 emitted flavor events, across all people. If no fresh applicable template exists, that attempt is skipped. Funny observations have no resource, condition, energy, or publication effects.
+- Acquisition accelerator costs $1,400 and multiplies instrument capacity and operator acquisition speed by 1.25.
+- Each extra field module costs $1,800 and adds that field at 0.2 times base output. Existing data yields stay unchanged. No duplicate module or already-present field is allowed at installation.
+- Two slots are available per instrument, regardless of level, after Modular instruments. Removing a module refunds 35% of its purchase price.
 
-Flavor uses a separate saved RNG, so event generation cannot change a manuscript's review result or future discovery draws. Existing condition loss still reduces capacity to a floor of 35%; this iteration does not introduce equipment failures. Worn-equipment text reflects that limitation.
+For example, an upgraded optical bench can produce 0.75 Optics and 0.25 Quantum per base data unit, plus 0.20 Nuclear from an attached module. Its total evidence output is 1.20 per base unit. This is an explicit productivity benefit; it is not a normalized redistribution.
 
-Experiments animate only when an operator is producing data. Desk screens animate during desk work. People use the same walkable grid for visual motion and show resting, studying, or writing indicators. Pausing freezes simulation activity and movement.
+Desk level 2 costs $700 and multiplies its seated user's analysis, writing and study by 1.15. Level 3 costs $1,400 and multiplies those tasks by 1.30. The analysis-cluster multiplier stacks with the desk multiplier. Travel and energy still affect work.
 
-## Interface and resource history
+## Beds and appearance
 
-The map occupies most of the screen. Four icon-led resource cards separate raw data from analyzed evidence. Build, People, Papers, and Develop share one management sidebar. People has a portrait roster and one focused routine/assignment editor. The daily schedule has draggable boundaries, numeric hour controls, and a distinct remaining Activity block.
+The building footprint remains 20×14. The former common room becomes a sleeping area with three starter beds, a coffee table, and seats for bedless rest. Beds occupy 1×2 tiles along the upper wall. Their access tile is at the foot. Up to six beds fit while leaving an entrance route clear; construction checks every workplace and bed before charging funds.
 
-Paper cards identify field and rarity separately. Unlocked papers appear before papers gated by lifetime impact, with fields supported by installed experiments first. Common cards explicitly say no impact is required, and the funding/impact line is labeled as a publication reward. They show commitment, acceptance odds, work, and the specific reason a manuscript cannot start. The writer banner distinguishes missing hours, missing reachable desks, and the next writing shift. “Scheduled now” describes the routine; travel or low energy can still delay actual writing.
+Beds cost $450 and return $157 when removed. One person owns each bed; an occupied bed cannot be assigned to someone else until its owner releases it. Newly placed beds go to the first unassigned staff member. Hires take a free bed if available and otherwise show a missing-bed warning.
 
-The history graph stores daily funds, each raw/analyzed field pool, and daily publication grants for up to 720 days. It supports 30-day, 90-day and full-history views. Samples begin at lab creation and continue each midnight. New idea and publication reveals pause time. Journal club reveals the highest-tier idea from its new board.
+Assigned and reachable beds restore seven energy per stationary hour, or ten with Rest facilities. Bedless rest restores 40%, initially 2.8 and later four energy/hour. Walking consumes the corresponding fraction of rest time. Work continues to drain two energy/hour, and energy below eight forces emergency rest.
 
-## Saves and compatibility
+Appearance is generated once per person and saved independently of specialties. Portrait and floor rendering share skin, hair, hairstyle, glasses, beard, clothing accents, and build. Researchers wear coats; students have colored clothing. Sleeping staff render in their assigned beds, while their navigation access point remains on walkable floor.
 
-The game starts at a main menu and does not overwrite anything there. It provides five named manual slots, a separate autosave, and a load list. Continue selects the most recently modified valid listed save. Autosave runs every five lab days, on return to the main menu, and on quitting an active lab. Loading always pauses.
+## Time and interface
 
-Version 3 uses `fieldwork_autosave_v3.json` and `fieldwork_slot_N_v3.json`. Version 2 and original prototype saves can be selected for import; their source files remain untouched. Old experiments are remapped into legal positions in the fixed building. Unplaced equipment receives its original base cost back. Old staff share the three starter desks until the player adds or reassigns furniture.
+The clock, cash, impact and pause controls have fixed-width areas. Numeric changes cannot shift the speed buttons. The pause control is amber while stopped and remains visible and clickable above management windows.
 
-Original untyped data becomes optics. Staff names and collection allocations migrate into routines. An unfinished iteration-1 manuscript returns its original dataset because it had no data field or review stage. Version 2 active papers preserve their evidence, progress, and fixed review roll.
+Browsing staff, recruitment, statistics, notebook, programs, modules, and development does not pause or resume time. Existing manual pauses are preserved. Referee decisions, program milestones, loading and the pause menu explicitly stop time. Referee and milestone windows offer a clear continuation action. A pending result or milestone also blocks direct hourly advancement and large-frame catch-up.
 
-Save validation runs before replacing current game state. Files are written through a temporary file and rename. Full-precision numbers preserve review draws. Navigation is rebuilt after loading. Furniture, history, flavor RNG/cooldown, and legendary protection persist.
+Referee feedback precedes any earned milestone. The next feedback window is deferred until the current one closes, preventing overlapping/orphaned windows when users switch management views. The program and development windows replace management popups, not sidebar tabs.
 
-## Verification and next playtest
+Both notebook views use paper, ruling, margins, binding, and dated entries. Event text remains contextual flavor only; it uses a separate RNG and recent-template exclusion. Old place names and iteration labels have been removed from the in-game interface. Upgrade effects are fixed small text; tooltips supplement details rather than hide the main benefit.
 
-On September 5, 2026, all **514 simulation checks and 114 interface checks** passed under Godot 4.7.2. Rendered screenshots were inspected for the main menu, gameplay, staff routine, paper tiers, publication feedback, resource graph, and full save chooser.
+## Saves
 
-The regression suite covers physical routes and placement, desk contention, routines, energy, trait effects, typed-data conservation, mixed output, all twelve field/tier publication combinations, rejection, hard clock stops, development, save slots, and previous-version migration. The UI suite exercises new/load/save/pause flows, rendered movement, staff controls, construction, paper commitments, feedback, graphs, and long save names. Tests use independent temporary save slots and disable autosave.
+Only version 4 is loaded. It uses a separate autosave and five named slots. Old files are not read, migrated or overwritten by these paths. Fresh runs select a program before entering the laboratory.
 
-With the controlled founding team, the first 18-evidence optics manuscript is ready after 155 lab hours (5 minutes 10 seconds at 1x), and its first decision arrives on day 12 at 18:00. A 160-day study-and-review strategy produces 10 papers from 11 decisions, reaches 20 lifetime impact, and needs no rescue grants. Those numbers are seeded checks, not expected outcomes for every lab.
+Saved state includes the full publication history, both evidence fields, program-specific manuscript identity, program level, pending milestone/victory, beds and ownership, staff appearance, equipment modules, desk levels, unlocked technologies, and all existing economy/routine data. Full-precision review draws and atomic writes remain in use.
 
-The initial version of this map used three tiles/hour and took 275 hours to reach a manuscript. Four tiles/hour keeps visual walking half the previous speed because days are longer, while reducing excessive commute and recovery penalties. The physical layout still makes the opening slower than iteration 2.
+## Validation and playtest priorities
 
-Next player feedback should focus on:
+The core suite checks collection, analysis, routines, traits, energy, navigation, publication commitments, all field/tier combinations, acceptance/rejection, hard pauses, saving, and a 160-day study/publication strategy.
 
-- Whether 48-second days and two-tile-per-second walking feel comfortable.
-- Whether the first-paper wait is too long once travel and rest are physical.
-- Whether the selected-person schedule makes activity time and desk conflicts clear.
-- Whether each resource icon and paper tier is recognizable without reading tooltips.
-- Whether notebook messages appear often enough and avoid noticeable repetition.
-- Whether legendary ideas feel special without being frustratingly rare.
-- Whether the resource graph makes bottlenecks clear enough to guide assignments.
+The progression suite verifies exclusive bed ownership, 40% fallback recovery, placement access, technology prerequisites, actual module output, actual upgraded-desk productivity, all three program completions, final-paper rejection and shelving, publication history beyond 40 entries, and saves with pending victory feedback. Program-completion tests provide evidence and accelerate writing/review setup to isolate progression logic; they are not full economy playthroughs.
 
-Later iterations can add research-route prerequisites, map expansion, longer-term goals, smarter automatic staffing, and more detailed breakdown or revision mechanics after this foundation is playtested.
+The UI suite renders the main menu, lab, staff, equipment, modules, notebook, tree, program, archive, publication decisions, milestone and victory feedback. It exercises an actual pointer click on the toolbar above an open window, checks clock-layout stability, and verifies that browsing does not auto-pause.
+
+The controlled founding team reaches 18 Optics evidence after 132 lab hours, around 4 minutes 24 seconds at 1x, and its first decision arrives on day 11 at 20:00. The changed rest-room routes make this slightly faster than iteration 3. A seeded 160-day base-loop strategy produces ten papers from eleven decisions with no rescue grants.
+
+Next playtests should focus on:
+
+- Whether the two technology branches create useful choices rather than mandatory chores.
+- Whether mixed and legendary paper requirements make the programs distinct enough.
+- Whether milestone counts and acquisition modules shorten or prolong the intended run length.
+- Whether six fully rested staff plus less-efficient bedless staff is a useful starting-space constraint.
+- Whether program/archive windows and visible upgrade effects answer the player's immediate questions.
+- Whether the reduced pauses remain comfortable while reviewing long-term plans.
+
+Map expansion, additional bed capacity, more programs, deeper personnel interactions and revised final-manuscript mechanics can follow these playtests.
+
+Verified in Godot 4.7.2: **509 core simulation checks, 238 progression checks, and 131 interface checks** passed.

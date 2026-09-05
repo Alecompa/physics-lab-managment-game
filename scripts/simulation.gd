@@ -7,6 +7,9 @@ signal announcement(message: String)
 signal paper_resolved(result: Dictionary)
 signal ideas_changed
 signal idea_discovered(idea: Dictionary)
+signal progression_changed
+
+const Programs = preload("res://scripts/research_programs.gd")
 
 const Layout = preload("res://scripts/lab_layout.gd")
 const Events = preload("res://scripts/lab_events.gd")
@@ -16,9 +19,7 @@ const EQUIPMENT = Catalog.EQUIPMENT
 const ROLES = Catalog.ROLES
 const JOURNALS = Catalog.JOURNALS
 const UPGRADES = Catalog.UPGRADES
-const SAVE_PATH = "user://fieldwork_autosave_v3.json"
-const V2_PATH = "user://fieldwork_lab_v2.json"
-const LEGACY_PATH = "user://fieldwork_lab.json"
+const SAVE_PATH = "user://fieldwork_autosave_v4.json"
 const GRID_SIZE = Layout.SIZE
 const DAY_SECONDS = 48.0
 const HOUR_SECONDS = DAY_SECONDS / 24.0
@@ -63,12 +64,17 @@ var rng = RandomNumberGenerator.new()
 var navigation = AStarGrid2D.new()
 var desks: Array = []
 var next_desk_id = 4
-var lab_name = "The North Annex"
+var lab_name = "My laboratory"
 var resource_history: Array = []
 var flavor_rng = RandomNumberGenerator.new()
 var recent_flavor: Array = []
 var next_flavor_hour = 14
 var discoveries_without_legendary = 0
+var beds: Array = []
+var next_bed_id = 4
+var research_program = ""
+var program_level = 0
+var pending_milestone: Dictionary = {}
 
 func empty_data() -> Dictionary:
 	return {"nuclear": 0.0, "quantum": 0.0, "materials": 0.0, "optics": 0.0}
@@ -96,17 +102,24 @@ func new_lab() -> void:
 	desks = []
 	for index in range(3): desks.append({"id": index + 1, "kind": "desk", "x": Layout.DESK_STARTS[index].x, "y": Layout.DESK_STARTS[index].y})
 	next_desk_id = 4
-	lab_name = "The North Annex"
+	lab_name = "My laboratory"
 	resource_history = []
 	recent_flavor = []
 	next_flavor_hour = 14
 	discoveries_without_legendary = 0
+	beds = []
+	for index in range(3): beds.append({"id": index + 1, "kind": "bed", "x": Layout.BED_STARTS[index].x, "y": Layout.BED_STARTS[index].y})
+	next_bed_id = 4
+	research_program = ""
+	program_level = 0
+	pending_milestone = {}
 	staff = []
 	for id in range(1, 4):
 		var person = make_person(id, "researcher" if id == 3 else "phd")
 		person.specialty = "optics"
 		person.personality = "early" if id != 2 else "social"
 		person.desk = id
+		person.bed = id
 		staff.append(person)
 	next_staff_id = 4
 	next_experiment_id = 2
@@ -130,7 +143,7 @@ func new_lab() -> void:
 	for role in ROLES: candidates[role] = make_person(next_staff_id + ROLES.keys().find(role), role)
 	rebuild_navigation()
 	record_resources()
-	announce("The North Annex opens its doors. Three desks, one bench, and several unanswered questions.")
+	announce("The lab opens. The optical bench is ready for its first measurements.")
 	updated.emit()
 
 func make_person(id: int, role: String) -> Dictionary:
@@ -140,12 +153,12 @@ func make_person(id: int, role: String) -> Dictionary:
 	return {"id": id, "name": Catalog.NAMES[(id - 1) % Catalog.NAMES.size()] + (" %d" % (id / Catalog.NAMES.size() + 1) if id > Catalog.NAMES.size() else ""), "role": role,
 		"specialty": FIELDS.keys()[rng.randi_range(0, 3)], "trait": Catalog.TRAITS.keys()[rng.randi_range(0, 3)], "personality": Catalog.PERSONALITIES.keys()[rng.randi_range(0, 3)],
 		"rest": rest, "acquire": acquire, "analyze": analyze, "duty": "maintain" if role == "technician" else "auto",
-		"focus": "any", "experiment": -1, "energy": 100.0, "x": float(Layout.ENTRANCE.x), "y": float(Layout.ENTRANCE.y), "desk": -1, "motion": [], "working": false, "last_field": "", "route": [], "destination": [], "status": "Ready", "task": "rest", "target_id": -1}
+		"focus": "any", "experiment": -1, "energy": 100.0, "x": float(Layout.ENTRANCE.x), "y": float(Layout.ENTRANCE.y), "bed": -1, "appearance": rng.randi_range(0, 999999), "desk": -1, "motion": [], "working": false, "last_field": "", "route": [], "destination": [], "status": "Ready", "task": "rest", "target_id": -1}
 
 func _process(delta: float) -> void:
-	if paused or not pending_result.is_empty(): return
+	if paused or not pending_result.is_empty() or not pending_milestone.is_empty(): return
 	accumulated_time += delta * speed
-	while accumulated_time >= HOUR_SECONDS and not paused and pending_result.is_empty():
+	while accumulated_time >= HOUR_SECONDS and not paused and pending_result.is_empty() and pending_milestone.is_empty():
 		accumulated_time -= HOUR_SECONDS
 		advance_hour()
 	if paused: accumulated_time = 0.0
@@ -187,6 +200,8 @@ func set_assignment(id: int, key: String, value: Variant) -> void:
 		if person.id != id: continue
 		if key == "focus" and (value == "any" or FIELDS.has(value)): person.focus = value
 		if key == "duty" and value in ["auto", "write", "study", "maintain"]: person.duty = value
+		if key == "bed":
+			if value == -1 or not bed_by_id(value).is_empty() and bed_owner(value) in [-1, id]: person.bed = value
 		if key == "desk" and (value == -1 or not desk_by_id(value).is_empty()): person.desk = value
 		if key == "experiment" and (value == -1 or not experiment_by_id(value).is_empty()): person.experiment = value
 		person.destination = []
@@ -207,7 +222,7 @@ func performance(person: Dictionary, task: String, field: String = "") -> float:
 	return factor
 
 func capacity_for(experiment: Dictionary) -> float:
-	return EQUIPMENT[experiment.kind].capacity * (1.0 + 0.5 * (experiment.level - 1)) * experiment.condition / 100.0
+	return EQUIPMENT[experiment.kind].capacity * (1.0 + 0.5 * (experiment.level - 1)) * experiment.condition / 100.0 * (1.25 if "accelerator" in experiment.get("modules", []) else 1.0)
 
 func capacity() -> float:
 	var amount = 0.0
@@ -241,10 +256,14 @@ func expenses() -> float:
 
 func output_mix(experiment: Dictionary) -> Dictionary:
 	var spec = EQUIPMENT[experiment.kind]
+	var mix = {spec.field: 1.0}
 	if "mixed_mode" in unlocked and experiment.level >= 2:
 		var secondary = 0.25 if experiment.level == 2 else 0.4
-		return {spec.field: 1.0 - secondary, spec.secondary: secondary}
-	return {spec.field: 1.0}
+		mix = {spec.field: 1.0 - secondary, spec.secondary: secondary}
+	for module in experiment.get("modules", []):
+		var field = Catalog.MODULES[module].field
+		if field != "": mix[field] = mix.get(field, 0.0) + 0.2
+	return mix
 
 func build_navigation(extra_kind: String = "", extra_cell: Vector2i = Vector2i.ZERO) -> AStarGrid2D:
 	var grid = AStarGrid2D.new()
@@ -255,7 +274,7 @@ func build_navigation(extra_kind: String = "", extra_cell: Vector2i = Vector2i.Z
 		for y in range(Layout.SIZE.y):
 			var cell = Vector2i(x, y)
 			if Layout.wall(cell) or Layout.fixed_furniture(cell): grid.set_point_solid(cell)
-	for object in experiments + desks:
+	for object in experiments + desks + beds:
 		for cell in Layout.cells(object.kind, Vector2i(object.x, object.y)): grid.set_point_solid(cell)
 	if extra_kind != "":
 		for cell in Layout.cells(extra_kind, extra_cell): grid.set_point_solid(cell)
@@ -302,9 +321,9 @@ func choose_desk(person: Dictionary, reserved: Dictionary = {}) -> Dictionary:
 	return best
 
 func placement_error(kind: String, cell: Vector2i) -> String:
-	if kind != "desk" and not equipment_unlocked(kind): return "Unlock this instrument in Development."
-	if not Layout.room_allows(kind, cell): return "Desks belong in the office." if kind == "desk" else "Experiments belong in the two laboratory rooms."
-	if funds < (600.0 if kind == "desk" else EQUIPMENT[kind].cost): return "Not enough research funds."
+	if kind not in ["desk", "bed"] and not equipment_unlocked(kind): return "Unlock this instrument in Development."
+	if not Layout.room_allows(kind, cell): return "Beds belong along the upper wall of the sleeping area." if kind == "bed" else "Desks belong in the office." if kind == "desk" else "Experiments belong in the two laboratory rooms."
+	if funds < (450.0 if kind == "bed" else 600.0 if kind == "desk" else EQUIPMENT[kind].cost): return "Not enough research funds."
 	for point in Layout.cells(kind, cell):
 		if navigation.is_point_solid(point): return "This space is occupied."
 		for desk in desks:
@@ -312,7 +331,7 @@ func placement_error(kind: String, cell: Vector2i) -> String:
 	if kind == "desk" and navigation.is_point_solid(cell + Vector2i.DOWN): return "Leave a free chair space below the desk."
 	var proposed = build_navigation(kind, cell)
 	var objects = experiments.duplicate()
-	if kind != "desk": objects.append({"kind": kind, "x": cell.x, "y": cell.y})
+	if kind not in ["desk", "bed"]: objects.append({"kind": kind, "x": cell.x, "y": cell.y})
 	for object in objects:
 		var reachable = false
 		for target in Layout.perimeter(object):
@@ -321,6 +340,8 @@ func placement_error(kind: String, cell: Vector2i) -> String:
 		if not reachable: return "Keep a route from the corridor to every experiment."
 	var chairs: Array = Layout.REST_SEATS.duplicate()
 	for desk in desks: chairs.append(Layout.chair(desk))
+	for bed in beds: chairs.append(Layout.bed_access(bed))
+	if kind == "bed": chairs.append(cell + Vector2i(0, 2))
 	if kind == "desk": chairs.append(cell + Vector2i.DOWN)
 	for chair in chairs:
 		if proposed.is_point_solid(chair) or proposed.get_point_path(Layout.ENTRANCE, chair).is_empty(): return "Keep the desks and common room accessible."
@@ -393,7 +414,7 @@ func choose_experiment(person: Dictionary, maintaining: bool = false) -> Diction
 
 func advance_hour() -> void:
 	# The pending feedback is a hard simulation stop, including direct test calls.
-	if not pending_result.is_empty(): return
+	if not pending_result.is_empty() or not pending_milestone.is_empty(): return
 	var capacities = {}
 	var occupancy = {}
 	var desk_reservations = {}
@@ -410,6 +431,9 @@ func advance_hour() -> void:
 		person.task = task
 		person.target_id = -1
 		var target = Layout.REST_SEATS[int(person.id) % Layout.REST_SEATS.size()]
+		var sleeping_bed = reachable_bed(person) if task == "rest" else {}
+		if not sleeping_bed.is_empty(): target = Layout.bed_access(sleeping_bed)
+		var desk_factor = 1.0
 		if task in ["analyze", "write", "study"]:
 			var desk = choose_desk(person, desk_reservations)
 			if desk.is_empty():
@@ -417,6 +441,7 @@ func advance_hour() -> void:
 				continue
 			desk_reservations[desk.id] = person.id
 			target = Layout.chair(desk)
+			desk_factor = 1.0 + 0.15 * (desk.get("level", 1) - 1)
 		var experiment: Dictionary = {}
 		if task in ["acquire", "maintain"]:
 			experiment = choose_experiment(person, task == "maintain")
@@ -427,8 +452,8 @@ func advance_hour() -> void:
 			target = interaction_cell(person, experiment)
 		var time_left = travel(person, target)
 		if task == "rest":
-			person.energy = minf(100.0, person.energy + time_left * (10.0 if "lounge" in unlocked else 7.0))
-			if time_left > 0: person.status = "Resting in the common room"; person.working = true
+			person.energy = minf(100.0, person.energy + time_left * (10.0 if "lounge" in unlocked else 7.0) * (1.0 if not sleeping_bed.is_empty() else 0.4))
+			if time_left > 0: person.status = "Sleeping in bed #%d" % sleeping_bed.id if not sleeping_bed.is_empty() else "Resting without a bed / 40% recovery"; person.working = true
 			continue
 		person.energy = maxf(0.0, person.energy - 2.0)
 		if time_left <= 0: continue
@@ -440,12 +465,12 @@ func advance_hour() -> void:
 					person.status = "Waiting: both bench positions occupied"
 					continue
 				occupancy[experiment.id] += 1
-				var work = minf(capacities[experiment.id], time_left * 0.6 * performance(person, task, EQUIPMENT[experiment.kind].field))
+				var work = minf(capacities[experiment.id], time_left * 0.6 * performance(person, task, EQUIPMENT[experiment.kind].field) * (1.25 if "accelerator" in experiment.get("modules", []) else 1.0))
 				capacities[experiment.id] -= work
 				for field in output_mix(experiment): raw_by_field[field] += work * output_mix(experiment)[field]
 				person.working = work > 0
 				person.last_field = EQUIPMENT[experiment.kind].field
-				last_produced += work
+				last_produced += work * total(output_mix(experiment))
 				person.status = "Collecting at %s #%d" % [EQUIPMENT[experiment.kind].name, experiment.id] if work > 0 else "Waiting: experiment at capacity"
 			"analyze":
 				var field = person.focus
@@ -454,7 +479,7 @@ func advance_hour() -> void:
 					if raw_by_field[field] <= 0:
 						for candidate in FIELDS:
 							if raw_by_field[candidate] > raw_by_field[field]: field = candidate
-				var amount = minf(raw_by_field[field], time_left * 0.65 * performance(person, task, field) * (1.25 if "compute" in unlocked else 1.0))
+				var amount = minf(raw_by_field[field], time_left * desk_factor * 0.65 * performance(person, task, field) * (1.25 if "compute" in unlocked else 1.0))
 				raw_by_field[field] -= amount
 				analyzed_by_field[field] += amount
 				person.working = amount > 0
@@ -466,14 +491,14 @@ func advance_hour() -> void:
 					person.working = false
 					person.status = "Waiting for a manuscript"
 					continue
-				var work = time_left * (0.3 if person.role == "researcher" else 0.12) * performance(person, task, active_paper.field)
+				var work = time_left * desk_factor * (0.3 if person.role == "researcher" else 0.12) * performance(person, task, active_paper.field)
 				work = minf(work, active_paper.work - active_paper.progress)
 				active_paper.progress += work
 				person.last_field = active_paper.field
 				last_written += work
 				person.status = "Writing " + FIELDS[active_paper.field].name
 			"study":
-				study_points += time_left * (0.35 if person.role == "researcher" else 0.12) * performance(person, task, person.specialty)
+				study_points += time_left * desk_factor * (0.35 if person.role == "researcher" else 0.12) * performance(person, task, person.specialty)
 				person.status = "Studying " + FIELDS[person.specialty].name
 			"maintain":
 				experiment.condition = minf(100.0, experiment.condition + time_left * 0.8 * performance(person, task))
@@ -519,7 +544,7 @@ func experiment_at(cell: Vector2i) -> Dictionary:
 	return {}
 
 func object_at(cell: Vector2i) -> Dictionary:
-	for object in experiments + desks:
+	for object in experiments + desks + beds:
 		if cell in Layout.cells(object.kind, Vector2i(object.x, object.y)): return object
 	return {}
 
@@ -532,9 +557,10 @@ func equipment_unlocked(kind: String) -> bool:
 	return EQUIPMENT.has(kind) and (EQUIPMENT[kind].unlock == "" or EQUIPMENT[kind].unlock in unlocked)
 
 func can_place(kind: String, cell: Vector2i) -> bool:
-	return (kind == "desk" or EQUIPMENT.has(kind)) and placement_error(kind, cell) == ""
+	return (kind in ["desk", "bed"] or EQUIPMENT.has(kind)) and placement_error(kind, cell) == ""
 
 func place_experiment(kind: String, cell: Vector2i) -> bool:
+	if kind == "bed": return place_bed(cell)
 	if kind == "desk": return place_desk(cell)
 	if not can_place(kind, cell): return false
 	funds -= EQUIPMENT[kind].cost
@@ -550,7 +576,7 @@ func upgrade_cost(experiment: Dictionary) -> float:
 
 func upgrade_experiment(id: int) -> bool:
 	var experiment = experiment_by_id(id)
-	if experiment.is_empty() or experiment.level >= 3 or funds < upgrade_cost(experiment): return false
+	if experiment.is_empty() or upgrade_block_reason(experiment) != "": return false
 	funds -= upgrade_cost(experiment)
 	experiment.level += 1
 	experiment.condition = 100.0
@@ -584,6 +610,7 @@ func hire(role: String) -> bool:
 	var person = candidates[role].duplicate(true)
 	person.id = next_staff_id
 	next_staff_id += 1
+	person.bed = free_bed_id()
 	staff.append(person)
 	candidates[role] = make_person(next_staff_id + 2, role)
 	announce("%s joined. %s specialist, %s." % [person.name, FIELDS[person.specialty].name, Catalog.TRAITS[person.trait].name])
@@ -685,7 +712,7 @@ func resolve_review() -> void:
 	if active_paper.is_empty(): return
 	var accepted = active_paper.review_roll < active_paper.chance
 	var spec = JOURNALS[active_paper.kind]
-	pending_result = {"title": active_paper.title, "field": active_paper.field, "kind": active_paper.kind, "accepted": accepted, "chance": active_paper.chance, "day": day, "impact": spec.impact if accepted else 0, "grant": spec.grant if accepted else 0, "feedback": "The referees found the evidence convincing and the method reproducible." if accepted else "The referees requested a stronger dataset. 75% of each committed data type has been returned. The idea is available to try again."}
+	pending_result = {"title": active_paper.title, "field": active_paper.field, "secondary": active_paper.secondary, "program_goal": active_paper.get("program_goal", ""), "paper_id": active_paper.id, "kind": active_paper.kind, "accepted": accepted, "chance": active_paper.chance, "day": day, "impact": spec.impact if accepted else 0, "grant": spec.grant if accepted else 0, "feedback": "The referees found the evidence convincing and the method reproducible." if accepted else "The referees requested a stronger dataset. 75% of each committed data type has been returned. The idea is available to try again."}
 	if accepted:
 		funds += spec.grant
 		total_grants += spec.grant
@@ -695,9 +722,9 @@ func resolve_review() -> void:
 	else:
 		for field in active_paper.committed: analyzed_by_field[field] += active_paper.committed[field] * 0.75
 		if ideas.size() >= 6: ideas.pop_back()
-		ideas.push_front({"id": active_paper.id, "field": active_paper.field, "kind": active_paper.kind, "title": active_paper.title, "secondary": active_paper.secondary})
+		ideas.push_front({"id": active_paper.id, "field": active_paper.field, "kind": active_paper.kind, "title": active_paper.title, "secondary": active_paper.secondary, "program_goal": active_paper.get("program_goal", "")})
 	history.push_front(pending_result.duplicate(true))
-	if history.size() > 40: history.resize(40)
+	update_program()
 	active_paper = {}
 	paused = true
 	accumulated_time = 0.0
@@ -714,7 +741,7 @@ func cancel_paper() -> void:
 	if active_paper.is_empty() or active_paper.stage == "review": return
 	for field in active_paper.committed: analyzed_by_field[field] += active_paper.committed[field]
 	if ideas.size() >= 6: ideas.pop_back()
-	ideas.push_front({"id": active_paper.id, "field": active_paper.field, "kind": active_paper.kind, "title": active_paper.title, "secondary": active_paper.secondary})
+	ideas.push_front({"id": active_paper.id, "field": active_paper.field, "kind": active_paper.kind, "title": active_paper.title, "secondary": active_paper.secondary, "program_goal": active_paper.get("program_goal", "")})
 	active_paper = {}
 	announce("Manuscript shelved. Dataset and idea returned; writing progress lost.")
 	ideas_changed.emit()
@@ -745,8 +772,8 @@ func announce(message: String) -> void:
 	announcement.emit(message)
 
 func snapshot() -> Dictionary:
-	var result = {"version": 3, "rng_state": str(rng.state), "rng_seed": str(rng.seed), "flavor_state": str(flavor_rng.state), "flavor_seed": str(flavor_rng.seed), "saved_at": Time.get_datetime_string_from_system()}
-	for key in ["funds", "raw_by_field", "analyzed_by_field", "prestige", "lifetime_impact", "published", "day", "hour", "experiments", "staff", "candidates", "active_paper", "pending_result", "ideas", "unlocked", "history", "log_entries", "next_staff_id", "next_experiment_id", "next_idea_id", "total_grants", "rescue_count", "study_points", "desks", "next_desk_id", "lab_name", "resource_history", "recent_flavor", "next_flavor_hour", "discoveries_without_legendary"]:
+	var result = {"version": 4, "rng_state": str(rng.state), "rng_seed": str(rng.seed), "flavor_state": str(flavor_rng.state), "flavor_seed": str(flavor_rng.seed), "saved_at": Time.get_datetime_string_from_system()}
+	for key in ["funds", "raw_by_field", "analyzed_by_field", "prestige", "lifetime_impact", "published", "day", "hour", "experiments", "staff", "candidates", "active_paper", "pending_result", "ideas", "unlocked", "history", "log_entries", "next_staff_id", "next_experiment_id", "next_idea_id", "total_grants", "rescue_count", "study_points", "desks", "next_desk_id", "lab_name", "resource_history", "recent_flavor", "next_flavor_hour", "discoveries_without_legendary", "beds", "next_bed_id", "research_program", "program_level", "pending_milestone"]:
 		var value = get(key)
 		result[key] = value.duplicate(true) if value is Dictionary or value is Array else value
 	return result
@@ -771,19 +798,17 @@ func load_lab(path: String = SAVE_PATH) -> bool:
 		announce("Unreadable save. Your current lab is unchanged.")
 		return false
 	var data = parser.data
-	if data is Dictionary and data.get("version") == 1: data = migrate_v1(data)
-	elif data is Dictionary and data.get("version") == 2: data = migrate_v2(data)
 	if not valid_save(data):
 		announce("Invalid save. Your current lab is unchanged.")
 		return false
 	for key in snapshot():
 		if key not in ["version", "rng_state", "rng_seed", "flavor_state", "flavor_seed", "saved_at"]: set(key, data[key])
-	for key in ["prestige", "lifetime_impact", "published", "day", "hour", "next_staff_id", "next_experiment_id", "next_idea_id", "rescue_count", "next_desk_id", "next_flavor_hour", "discoveries_without_legendary"]:
+	for key in ["prestige", "lifetime_impact", "published", "day", "hour", "next_staff_id", "next_experiment_id", "next_idea_id", "rescue_count", "next_desk_id", "next_flavor_hour", "discoveries_without_legendary", "next_bed_id", "program_level"]:
 		set(key, int(get(key)))
 	for person in staff + candidates.values():
-		for key in ["id", "rest", "acquire", "analyze", "experiment", "desk"]: person[key] = int(person[key])
-	for desk in desks:
-		for key in ["id", "x", "y"]: desk[key] = int(desk[key])
+		for key in ["id", "rest", "acquire", "analyze", "experiment", "desk", "bed"]: person[key] = int(person[key])
+	for object in desks + beds:
+		for key in ["id", "x", "y"]: object[key] = int(object[key])
 	for experiment in experiments:
 		for key in ["id", "x", "y", "level"]: experiment[key] = int(experiment[key])
 	rng.seed = int(data.rng_seed)
@@ -802,46 +827,11 @@ func load_lab(path: String = SAVE_PATH) -> bool:
 	updated.emit()
 	return true
 
-func migrate_v1(old: Dictionary) -> Dictionary:
-	# Build in a separate simulation so a malformed legacy file cannot alter this lab.
-	for key in ["funds", "raw_data", "analyzed_data", "prestige", "day", "published"]:
-		if not numeric(old.get(key)): return {}
-	if not old.get("staff") is Array or not old.get("experiments") is Array: return {}
-	var temporary = LabSimulation.new()
-	temporary.new_lab()
-	var migrated = temporary.snapshot()
-	temporary.free()
-	for key in ["funds", "prestige", "published", "day", "experiments", "next_staff_id", "next_experiment_id", "total_grants", "rescue_count"]:
-		if old.has(key): migrated[key] = old[key]
-	migrated.lifetime_impact = old.prestige
-	migrated.raw_by_field.optics = old.raw_data
-	migrated.analyzed_by_field.optics = old.analyzed_data
-	migrated.staff = []
-	for old_person in old.staff:
-		if not old_person is Dictionary or not ROLES.has(old_person.get("role", "")) or not numeric(old_person.get("id")) or not old_person.get("name") is String: return {}
-		var generator = LabSimulation.new()
-		var person = generator.make_person(old_person.id, old_person.role)
-		generator.free()
-		person.name = old_person.name
-		if old_person.role == "phd":
-			person.acquire = clampi(roundi(float(old_person.get("allocation", 0.55)) * 16), 0, 16)
-			person.analyze = 16 - person.acquire
-		migrated.staff.append(person)
-	for experiment in old.experiments:
-		if experiment is Dictionary and EQUIPMENT.has(experiment.get("kind", "")):
-			var key = EQUIPMENT[experiment.kind].unlock
-			if key != "" and key not in migrated.unlocked: migrated.unlocked.append(key)
-	# Old manuscripts had no review or data type. Return the original committed dataset.
-	var old_paper = old.get("active_paper", {})
-	if old_paper is Dictionary and JOURNALS.has(old_paper.get("kind", "")):
-		migrated.analyzed_by_field.optics += {"letter": 24, "article": 80, "breakthrough": 200}[old_paper.kind]
-	return migrate_v2(migrated)
-
 func numeric(value: Variant) -> bool:
 	return (value is float or value is int) and is_finite(float(value)) and value >= 0
 
 func valid_save(data: Variant) -> bool:
-	if not data is Dictionary or data.get("version") != 3: return false
+	if not data is Dictionary or data.get("version") != 4: return false
 	for key in ["funds", "prestige", "lifetime_impact", "published", "day", "hour", "next_staff_id", "next_experiment_id", "next_idea_id", "total_grants", "rescue_count", "study_points", "next_desk_id", "next_flavor_hour", "discoveries_without_legendary"]:
 		if not numeric(data.get(key)): return false
 	if data.hour >= 24 or data.day < 1 or data.prestige > data.lifetime_impact: return false
@@ -851,7 +841,7 @@ func valid_save(data: Variant) -> bool:
 		if not data.get(key) is Dictionary: return false
 		for field in FIELDS:
 			if not numeric(data[key].get(field)): return false
-	for key in ["experiments", "staff", "ideas", "unlocked", "history", "log_entries", "desks", "resource_history", "recent_flavor"]:
+	for key in ["experiments", "staff", "ideas", "unlocked", "history", "log_entries", "desks", "beds", "resource_history", "recent_flavor"]:
 		if not data.get(key) is Array: return false
 	if data.staff.size() > 18 or data.ideas.size() > 6: return false
 	for key in ["active_paper", "pending_result", "candidates"]:
@@ -865,12 +855,28 @@ func valid_save(data: Variant) -> bool:
 			if not point.get(pool) is Dictionary: return false
 			for field in FIELDS:
 				if not numeric(point[pool].get(field)): return false
+	if not numeric(data.get("next_bed_id")) or not numeric(data.get("program_level")) or data.program_level > 4: return false
+	if data.get("research_program") != "" and not Programs.PROGRAMS.has(data.get("research_program", "")): return false
+	if not data.get("pending_milestone") is Dictionary: return false
+	if not data.pending_milestone.is_empty():
+		if not numeric(data.pending_milestone.get("from")) or not numeric(data.pending_milestone.get("to")) or data.pending_milestone.to > 4 or not data.pending_milestone.get("victory") is bool: return false
 	var occupied = {}
+	var bed_ids = []
+	for bed in data.beds:
+		if not bed is Dictionary or bed.get("kind") != "bed": return false
+		for key in ["id", "x", "y"]:
+			if not numeric(bed.get(key)): return false
+		if bed.id in bed_ids or not Layout.room_allows("bed", Vector2i(bed.x, bed.y)): return false
+		bed_ids.append(bed.id)
+		for cell in Layout.cells("bed", Vector2i(bed.x, bed.y)):
+			if occupied.has(cell): return false
+			occupied[cell] = true
 	var desk_ids = []
 	for desk in data.desks:
 		if not desk is Dictionary or desk.get("kind") != "desk": return false
 		for key in ["id", "x", "y"]:
 			if not numeric(desk.get(key)): return false
+		if not numeric(desk.get("level", 1)) or desk.get("level", 1) not in [1, 2, 3]: return false
 		if desk.id in desk_ids or not Layout.room_allows("desk", Vector2i(desk.x, desk.y)): return false
 		desk_ids.append(desk.id)
 		for cell in Layout.cells("desk", Vector2i(desk.x, desk.y)):
@@ -881,6 +887,11 @@ func valid_save(data: Variant) -> bool:
 		if not experiment is Dictionary or not EQUIPMENT.has(experiment.get("kind", "")): return false
 		for key in ["id", "x", "y", "level", "condition"]:
 			if not numeric(experiment.get(key)): return false
+		if not experiment.get("modules", []) is Array or experiment.get("modules", []).size() > 2: return false
+		var unique_modules = []
+		for module in experiment.get("modules", []):
+			if not Catalog.MODULES.has(module) or module in unique_modules: return false
+			unique_modules.append(module)
 		var cell = Vector2i(experiment.x, experiment.y)
 		if experiment.id in experiment_ids or not Layout.room_allows(experiment.kind, cell) or experiment.level < 1 or experiment.level > 3 or experiment.condition < 35 or experiment.condition > 100: return false
 		for footprint_cell in Layout.cells(experiment.kind, cell):
@@ -904,11 +915,19 @@ func valid_save(data: Variant) -> bool:
 		for target in Layout.perimeter(experiment):
 			if saved_grid.is_in_boundsv(target) and not saved_grid.is_point_solid(target) and not saved_grid.get_point_path(Layout.ENTRANCE, target).is_empty(): accessible = true; break
 		if not accessible: return false
+	for bed in data.beds:
+		if saved_grid.get_point_path(Layout.ENTRANCE, Layout.bed_access(bed)).is_empty(): return false
+	var assigned_beds = []
 	var staff_ids = []
 	for person in data.staff:
 		if not valid_person(person) or person.id in staff_ids: return false
 		if person.experiment != -1 and person.experiment not in experiment_ids: return false
 		if person.desk != -1 and person.desk not in desk_ids: return false
+		if not person.get("bed") is int and not person.get("bed") is float: return false
+		if person.bed != -1:
+			if person.bed not in bed_ids or person.bed in assigned_beds: return false
+			assigned_beds.append(person.bed)
+		if not numeric(person.get("appearance")): return false
 		staff_ids.append(person.id)
 	for role in ROLES:
 		if not valid_person(data.candidates.get(role)) or data.candidates[role].role != role: return false
@@ -927,6 +946,7 @@ func valid_save(data: Variant) -> bool:
 			if not FIELDS.has(field) or not numeric(paper.committed[field]): return false
 	for result in data.history + ([data.pending_result] if not data.pending_result.is_empty() else []):
 		if not result is Dictionary or not result.get("title") is String or not result.get("feedback") is String or not result.get("accepted") is bool or not FIELDS.has(result.get("field", "")) or not JOURNALS.has(result.get("kind", "")): return false
+		if result.get("secondary", "") != "" and not FIELDS.has(result.get("secondary")): return false
 		for key in ["day", "chance", "impact", "grant"]:
 			if not numeric(result.get(key)): return false
 	for entry in data.log_entries:
@@ -1017,7 +1037,7 @@ func record_resources() -> void:
 var save_prefix = "user://"
 
 func slot_path(slot: int) -> String:
-	return save_prefix + "fieldwork_slot_%d_v3.json" % slot
+	return save_prefix + "fieldwork_slot_%d_v4.json" % slot
 
 func save_slot(slot: int, title: String) -> bool:
 	if slot < 1 or slot > 5: return false
@@ -1032,8 +1052,6 @@ func save_entries() -> Array:
 	var result: Array = []
 	var paths = [SAVE_PATH]
 	for slot in range(1, 6): paths.append(slot_path(slot))
-	paths.append(V2_PATH)
-	paths.append(LEGACY_PATH)
 	for path in paths:
 		if not FileAccess.file_exists(path): continue
 		var parser = JSON.new()
@@ -1042,74 +1060,146 @@ func save_entries() -> Array:
 			result.append({"path": path, "name": "Unreadable save", "day": 0, "valid": false, "date": ""})
 			continue
 		var data = parser.data
-		result.append({"path": path, "name": str(data.get("lab_name", "Previous laboratory")), "day": int(data.day) if numeric(data.get("day")) else 0, "valid": valid_save(data) if data.get("version") == 3 else data.get("version") in [1, 2], "date": str(data.get("saved_at", "")), "autosave": path == SAVE_PATH, "legacy": path in [V2_PATH, LEGACY_PATH], "slot": paths.find(path), "modified": FileAccess.get_modified_time(path)})
+		result.append({"path": path, "name": str(data.get("lab_name", "Previous laboratory")), "day": int(data.day) if numeric(data.get("day")) else 0, "valid": valid_save(data), "date": str(data.get("saved_at", "")), "autosave": path == SAVE_PATH, "slot": paths.find(path), "modified": FileAccess.get_modified_time(path)})
 	result.sort_custom(func(a, b): return a.get("modified", 0) > b.get("modified", 0))
 	return result
 
-func migrate_v2(old: Dictionary) -> Dictionary:
-	for key in ["funds", "prestige", "lifetime_impact", "published", "day", "hour", "next_staff_id", "next_experiment_id", "next_idea_id", "total_grants", "rescue_count", "study_points"]:
-		if old.has(key) and not numeric(old[key]): return {}
-	for key in ["raw_by_field", "analyzed_by_field", "candidates", "active_paper", "pending_result"]:
-		if old.has(key) and not old[key] is Dictionary: return {}
-	for key in ["staff", "experiments", "ideas", "unlocked", "history", "log_entries"]:
-		if not old.get(key) is Array: return {}
-	for person in old.staff + old.get("candidates", {}).values():
-		if not person is Dictionary: return {}
-		var normalized = person.duplicate(true)
-		normalized.desk = -1
-		if not valid_person(normalized): return {}
-	for experiment in old.experiments:
-		if not experiment is Dictionary or not EQUIPMENT.has(experiment.get("kind", "")): return {}
-		for key in ["id", "x", "y", "level", "condition"]:
-			if not numeric(experiment.get(key)): return {}
-	var temporary = LabSimulation.new()
-	temporary.new_lab()
-	temporary.autosave_enabled = false
-	for key in ["funds", "raw_by_field", "analyzed_by_field", "prestige", "lifetime_impact", "published", "day", "hour", "staff", "candidates", "active_paper", "pending_result", "ideas", "unlocked", "history", "log_entries", "next_staff_id", "next_experiment_id", "next_idea_id", "total_grants", "rescue_count", "study_points"]:
-		if old.has(key): temporary.set(key, old[key].duplicate(true) if old[key] is Dictionary or old[key] is Array else old[key])
-	temporary.experiments.clear()
-	temporary.rebuild_navigation()
-	var original_funds = temporary.funds
-	for experiment in old.get("experiments", []):
-		if not experiment is Dictionary or not EQUIPMENT.has(experiment.get("kind", "")): temporary.free(); return {}
-		var placed = false
-		for x in [2, 5, 12, 15, 1, 4, 13, 16]:
-			for y in [1, 3]:
-				temporary.funds = maxf(temporary.funds, 100000)
-				if temporary.placement_error(experiment.kind, Vector2i(x, y)) == "":
-					var remapped = experiment.duplicate(true)
-					remapped.x = x
-					remapped.y = y
-					temporary.experiments.append(remapped)
-					temporary.rebuild_navigation()
-					placed = true
-					break
-			if placed: break
-		if not placed:
-			original_funds += EQUIPMENT[experiment.kind].cost
-			for person in temporary.staff:
-				if person.get("experiment") == experiment.id: person.experiment = -1
-	temporary.funds = original_funds
-	for index in range(temporary.staff.size()):
-		var person = temporary.staff[index]
-		person.desk = index % 3 + 1
-		person.x = float(Layout.ENTRANCE.x)
-		person.y = float(Layout.ENTRANCE.y)
-		person.motion = []
-		person.working = false
-		person.last_field = ""
-	for candidate in temporary.candidates.values():
-		candidate.desk = -1
-		candidate.x = float(Layout.ENTRANCE.x)
-		candidate.y = float(Layout.ENTRANCE.y)
-		candidate.motion = []
-		candidate.working = false
-		candidate.last_field = ""
-	temporary.resource_history.clear()
-	temporary.record_resources()
-	temporary.next_flavor_hour = (int(temporary.day) - 1) * 24 + int(temporary.hour) + 12
-	var data = temporary.snapshot()
-	for key in ["rng_seed", "rng_state"]:
-		if old.has(key): data[key] = old[key]
-	temporary.free()
-	return data
+func bed_by_id(id: int) -> Dictionary:
+	for bed in beds:
+		if bed.id == id: return bed
+	return {}
+
+func bed_owner(id: int) -> int:
+	for person in staff:
+		if person.get("bed", -1) == id: return person.id
+	return -1
+
+func free_bed_id() -> int:
+	for bed in beds:
+		if bed_owner(bed.id) == -1: return bed.id
+	return -1
+
+func reachable_bed(person: Dictionary) -> Dictionary:
+	var bed = bed_by_id(person.get("bed", -1))
+	if bed.is_empty(): return {}
+	if navigation.get_point_path(Vector2i(roundi(person.x), roundi(person.y)), Layout.bed_access(bed)).is_empty(): return {}
+	return bed
+
+func place_bed(cell: Vector2i) -> bool:
+	if placement_error("bed", cell) != "": return false
+	funds -= 450
+	beds.append({"id": next_bed_id, "kind": "bed", "x": cell.x, "y": cell.y})
+	for person in staff:
+		if person.get("bed", -1) == -1: person.bed = next_bed_id; break
+	next_bed_id += 1
+	rebuild_navigation()
+	announce("Bed installed. Assign its owner in People.")
+	updated.emit()
+	return true
+
+func remove_bed(id: int) -> bool:
+	var bed = bed_by_id(id)
+	if bed.is_empty(): return false
+	beds.erase(bed)
+	funds += 157
+	for person in staff:
+		if person.get("bed", -1) == id: person.bed = -1
+	rebuild_navigation()
+	updated.emit()
+	return true
+
+func upgrade_block_reason(experiment: Dictionary) -> String:
+	if experiment.level >= 3: return "Maximum level"
+	var technology = "precision" if experiment.level == 1 else "advanced_instruments"
+	if technology not in unlocked: return "Requires " + UPGRADES[technology].name
+	if funds < upgrade_cost(experiment): return "Not enough funds"
+	return ""
+
+func desk_upgrade_reason(desk: Dictionary) -> String:
+	var level = desk.get("level", 1)
+	if level >= 3: return "Maximum level"
+	var technology = "desk_systems" if level == 1 else "compute"
+	if technology not in unlocked: return "Requires " + UPGRADES[technology].name
+	if funds < level * 700: return "Not enough funds"
+	return ""
+
+func upgrade_desk(id: int) -> bool:
+	var desk = desk_by_id(id)
+	if desk.is_empty() or desk_upgrade_reason(desk) != "": return false
+	funds -= desk.get("level", 1) * 700
+	desk.level = desk.get("level", 1) + 1
+	updated.emit()
+	return true
+
+func module_reason(id: int, key: String) -> String:
+	var experiment = experiment_by_id(id)
+	if experiment.is_empty() or not Catalog.MODULES.has(key): return "Unknown module or instrument"
+	var spec = Catalog.MODULES[key]
+	if spec.unlock not in unlocked: return "Requires " + UPGRADES[spec.unlock].name
+	var modules = experiment.get("modules", [])
+	if key in modules: return "Already installed"
+	if modules.size() >= 2: return "Both module slots are occupied"
+	if spec.field != "" and output_mix(experiment).has(spec.field): return "This instrument already produces " + FIELDS[spec.field].name
+	if funds < spec.cost: return "Not enough funds"
+	return ""
+
+func install_module(id: int, key: String) -> bool:
+	if module_reason(id, key) != "": return false
+	var experiment = experiment_by_id(id)
+	if not experiment.has("modules"): experiment.modules = []
+	experiment.modules.append(key)
+	funds -= Catalog.MODULES[key].cost
+	updated.emit()
+	return true
+
+func remove_module(id: int, key: String) -> bool:
+	var experiment = experiment_by_id(id)
+	if experiment.is_empty() or key not in experiment.get("modules", []): return false
+	experiment.modules.erase(key)
+	funds += Catalog.MODULES[key].cost * 0.35
+	updated.emit()
+	return true
+
+func choose_program(key: String) -> bool:
+	if research_program != "" or not Programs.PROGRAMS.has(key): return false
+	research_program = key
+	update_program()
+	progression_changed.emit()
+	updated.emit()
+	return true
+
+func update_program() -> void:
+	var reached = Programs.level(research_program, history)
+	if reached <= program_level: return
+	pending_milestone = {"from": program_level, "to": reached, "victory": reached == 4}
+	program_level = reached
+	paused = true
+	progression_changed.emit()
+
+func acknowledge_milestone() -> void:
+	pending_milestone = {}
+	paused = true
+	updated.emit()
+
+func discovery_reason() -> String:
+	if research_program == "": return "Choose a research program first"
+	if program_level < 3: return "Complete Independent evidence first"
+	if program_level >= 4: return "Discovery completed"
+	for idea in ideas + ([active_paper] if not active_paper.is_empty() else []):
+		if idea.get("program_goal", "") == research_program: return "Discovery manuscript already available"
+	if ideas.size() >= 6: return "Free an idea slot first"
+	if study_points < 12: return "Requires 12 study points"
+	return ""
+
+func develop_discovery() -> bool:
+	if discovery_reason() != "": return false
+	var spec = Programs.PROGRAMS[research_program]
+	var idea = add_idea(spec.field, "breakthrough")
+	idea.secondary = spec.secondary
+	idea.title = spec.paper
+	idea.program_goal = research_program
+	study_points -= 12
+	idea_discovered.emit(idea)
+	ideas_changed.emit()
+	updated.emit()
+	return true

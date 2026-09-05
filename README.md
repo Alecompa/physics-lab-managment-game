@@ -1,110 +1,128 @@
-# Fieldwork — iteration 3
+# Fieldwork, iteration 4
 
-A Godot prototype about managing a physics laboratory: collect data, analyze it, write papers, then use publication funding and impact to develop the lab.
+A Godot management game about running a physics laboratory. Collect data, analyze it, publish papers, and build toward a major discovery.
 
 ## Play
 
-Double-click **Play.command**. Choose **New laboratory** or **Load laboratory** from the main menu. Existing running copies must be restarted to pick up this iteration.
+Double-click **Play.command**, or open **project.godot** in Godot and press **F5**. Restart any running copy to use this iteration. Built with Godot 4.7.2 and the compatibility renderer. No plugins are required.
 
-To edit the project, open **project.godot** in Godot and press **F5**. Built and tested with Godot 4.7.2 and the compatibility renderer; no plugins or external libraries required.
+**Start a new laboratory.** This iteration uses fresh version-4 saves and intentionally does not load older saves.
 
-The lab starts paused. **Space** resumes; **Esc** opens the pause menu. A day lasts **48 real seconds at 1x**, twice as long as iteration 2. Keys **1 / 2 / 3** select **1x / 2x / 4x**. People walk at half the previous visual speed at 1x.
+Choose a lab name and one research program at the beginning of the run. The game starts paused. **Space** pauses/resumes, and **1 / 2 / 3** select **1x / 2x / 4x**. Days remain **48 seconds at 1x**; base paper costs, review times, and evidence commitments are unchanged.
 
-![The starting laboratory](docs/prototype-v3.png)
+![Starting lab](docs/prototype-v4.png)
 
-## This iteration
+## Research programs
 
-- A restrained charcoal and sage interface, distinct icons for nuclear, quantum, materials, and optics, and a larger laboratory view. Detailed explanations live in tooltips and information popups.
-- A fixed building with two experiment rooms, an office, a common room, doors, and corridors. Experiments occupy **2×2** tiles. Desks occupy **2×1**, with a chair tile below. Construction keeps workstations reachable.
-- Physical desk assignments. Analysis, writing, and study require reaching a free chair; one person uses each desk per work hour. Staff path around walls and furniture. People can pass through each other.
-- Staff portraits, a compact roster, and individual detail panels with a draggable daily schedule. Assign rest, collection, analysis, activity, data focus, experiment, and desk.
-- Experiment activity, moving people, working screens, and resting/studying/writing indicators animate while time runs.
-- A lab notebook with varied activity-based flavor, low-energy observations, worn-equipment hints, and specialist moments. These events have no gameplay effects.
-- Common, rare, and legendary paper cards with separate field icons, colored borders, and discovery reveals. The writing banner explains missing time or desks before evidence is committed.
-- A main menu, pause menu, five named save slots, a separate autosave, and load selection.
-- Resource history for funds, raw data, analyzed evidence, and publication income. Daily samples support 30-day, 90-day, and full-history views, with hover values.
+The target icon opens a separate program window and publication archive. Choose one program per run:
 
-## First playtest
-
-1. Resume and watch the team walk to the bench and desks. The two founding students collect optics and later analyze it. The researcher studies while there is no manuscript.
-2. Click a person or open **People** to inspect their routine. Drag a boundary or edit hours. Gold hours run the selected **Activity**; **Auto** writes when a manuscript needs work and studies otherwise.
-3. Accumulate **18 optics evidence** and open **Papers**. Commit 100–200% of the required evidence. A letter starts at 62% acceptance; double evidence raises it to 94% and increases writing work by 20%.
-4. Start the manuscript. Writers work during scheduled activity at a physical desk. Peer review begins when writing finishes. Its outcome pauses time and shows a titled result; closing it leaves the lab paused.
-5. Accepted papers grant funds and impact. Rejection returns 75% of the committed evidence and restores the idea. Shelving before review returns the full dataset but loses writing progress.
-6. Spend eight study points on **Discover**. Free an idea slot by discarding an unwanted idea. **Journal club**, once unlocked, replaces the six-card board for twelve points and reveals its highest-tier idea.
-7. Build more equipment or desks and try existing **Develop** upgrades. Space expansion, research routes, and longer-term objectives are reserved for later iterations.
-
-A controlled founding-team run reached the first manuscript after **155 lab hours**, about **5 minutes 10 seconds at 1x**. Actual timing varies with traits, assignments, travel, and evidence commitment. The larger layout makes travel meaningful; this remains a playtest tuning point.
-
-## Ideas and fields
-
-Random discoveries use a **55% common / 30% rare / 15% legendary** base roll. After seven consecutive non-legendary random draws, the next is legendary. Journal club's random cards share that protection; its guaranteed basic cards do not consume it. The effective legendary frequency is consequently higher than 15% over long runs.
-
-Appearance has no lifetime-impact gate. Starting an article still requires two lifetime impact; starting a high-impact paper requires seven. Later research-route requirements are not implemented.
-
-| Equipment | Primary data | Secondary data after mixed-mode upgrade |
+| Program | Principal field | Final discovery manuscript fields |
 | --- | --- | --- |
-| Optical bench | Optics | Quantum |
-| Materials chamber | Materials | Optics |
-| Particle detector | Nuclear | Materials |
-| Quantum rig | Quantum | Nuclear |
+| Dark matter searches | Nuclear | Nuclear + Quantum |
+| Fault-tolerant quantum computing | Quantum | Quantum + Optics |
+| Unconventional superconductivity | Materials | Materials + Quantum |
 
-Mixed-mode acquisition is an existing permanent development. It applies to level 2+ experiments: 75/25 primary/secondary at level 2, 60/40 at level 3. It also enables newly generated advanced ideas that require two types of evidence.
+Each program has four cumulative milestones:
 
-## Saves
+1. **Foundations:** two accepted papers, including one Optics paper. Starter equipment is sufficient.
+2. **Focused studies:** five accepted papers, including two in the principal field and one rare-or-legendary paper in that field.
+3. **Independent evidence:** eight accepted papers, including two mixed-field papers involving the principal field and one legendary paper involving it.
+4. **Major discovery:** ten accepted papers, including two legendary papers involving the principal field and the program's final discovery manuscript.
 
-Use **Esc → Save laboratory** or **Cmd+S / Ctrl+S** to choose one of five named slots. Overwriting an occupied slot asks for confirmation. Autosave runs every five lab days and when returning to the main menu or quitting an active lab. Starting at the main menu never overwrites a save.
+Earlier papers count throughout the run. Higher tiers count toward lower-tier requirements, and mixed papers count in both fields. A paper can satisfy several criteria but is counted only once within each criterion. Rejected papers grant no program credit.
 
-Godot stores these files in this game's `user://` directory, accessible through **Project → Open User Data Folder** in the editor:
+After stage three, spend **12 study points** in the program window to develop the final mixed-field legendary manuscript. It is guaranteed, subject to a free idea slot, and goes through the usual evidence, writing, and review process. Rejection restores it for another attempt. Completing the program presents the discovery and lets you continue playing.
 
-- `fieldwork_autosave_v3.json`
-- `fieldwork_slot_1_v3.json` through `fieldwork_slot_5_v3.json`
+The publication archive retains every accepted paper, including both fields, tier, date, rewards, and program contribution. Filter by field and rarity.
 
-Load selection also offers previous `fieldwork_lab_v2.json` and `fieldwork_lab.json` saves when present. Originals are left untouched. Old experiments are repositioned into the fixed building, and staff receive the starting desks. If an older lab has more equipment than fits, unplaced equipment is refunded at its base purchase price. Iteration 1 untyped data becomes optics; its unfinished manuscripts return their original evidence.
+## The laboratory
 
-Saves restore paused and retain typed data, furniture, staff traits, schedules, review draws, pending decisions, resource history, and discovery protection. The random review draw is fixed when writing starts, so loading does not reroll it.
+Walls and corridors remain fixed. Experiments occupy **2×2** tiles in the upper labs. Desks occupy **2×1** office tiles and require a chair below. Beds occupy **1×2** tiles along the sleeping area's upper wall and require access at their foot. Placement preserves routes to workplaces and beds.
 
-## Controls
+The founding staff each have a desk and bed. Add beds before hiring if you want new staff to recover efficiently. A new bed automatically goes to the first person without one; otherwise assign ownership in **People**. Beds have exclusive owners. The room fits up to six while keeping an entrance clear.
+
+- An assigned, reachable bed restores **7 energy per stationary rest hour**.
+- Rest without a bed restores **40%**, initially 2.8 energy/hour.
+- Rest facilities raise these values to 10 and 4 respectively.
+- Working drains energy. Exhausted staff take emergency rest.
+
+Each person has a portrait and matching appearance on the floor, with varied hair, skin, glasses, facial hair, clothing, and build. Staff follow their 24-hour routines and path around furniture. People can pass through one another; desks have one user per work hour.
+
+## Data and papers
+
+Nuclear, Quantum, Materials, and Optics each have raw data and analyzed evidence. Students collect during their collection block and analyze at a desk during their analysis block. Remaining gold hours run the selected Activity. **Auto** writes when a manuscript needs work and studies otherwise.
+
+| Paper tier | Base evidence | Writing work | Acceptance | Review | Funding | Impact awarded | Lifetime impact required |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Common letter | 18 | 10 | 62% | 24h | $2,600 | 2 | 0 |
+| Rare article | 48 | 26 | 48% | 48h | $8,200 | 5 | 2 |
+| Legendary paper | 110 | 55 | 35% | 72h | $22,000 | 12 | 7 |
+
+Common papers require no impact. Impact shown under “On publication” is a reward. Lifetime-impact requirements never spend impact.
+
+Commit 100–200% of the minimum evidence. Double evidence adds 32 acceptance percentage points and 20% writing work. Rejection returns 75% of committed evidence and restores the idea. Shelving before review returns the full evidence but loses writing progress. Review rolls are fixed when writing starts and survive saving.
+
+Study earns points for ideas. **Discover** costs 8 points; journal club refreshes the board for 12 after its technology unlock. Random tiers use a 55% common / 30% rare / 15% legendary base roll, with a legendary guaranteed after seven consecutive misses. The final program manuscript does not depend on this randomness.
+
+## Development and modules
+
+The tree icon opens Development in a separate window. Technologies cost impact. Equipment upgrades and modules then cost funds. Descriptions and costs are visible, and arrows show prerequisites.
+
+- **Instrumentation:** Precision instrumentation opens level 2 and leads to nuclear instruments and module slots. Module slots lead to mixed-mode acquisition, then level 3 and quantum instruments.
+- **Computation and research:** Workstation systems opens desk upgrades, leading to analysis improvements and journal club. These lead to rest facilities and internal peer review.
+
+Inspect an experiment to see current and next capacity, data channels, upkeep, condition, cost, and required technology. Level 2 adds 50% base capacity; level 3 doubles base capacity. Upgrading restores condition. Mixed-mode technology also enables native 75/25 primary/secondary output at level 2 and 60/40 at level 3.
+
+Each instrument has **two module slots** after the relevant unlock. Attachments are visible on the instrument:
+
+- **Acquisition accelerator, $1,400:** +25% capacity and operator acquisition speed.
+- **Additional data channel, $1,800:** add a selected field equal to 20% of base output, preserving existing channel yields. Requires mixed-mode technology. A field already produced by that instrument cannot be installed again.
+
+Modules can be removed for a 35% refund. Desk level 2 costs $700 and gives +15% analysis, writing, and study; level 3 costs $1,400 and gives +30%. Technology prerequisites apply to each level.
+
+## Interface and time
+
+The notebook uses paper, ruled lines, dates, and binding in both its compact and expanded views. Its contextual jokes and observations have no gameplay effects. Fatigue and equipment-wear observations reflect actual state. Flavor has separate randomness from paper outcomes.
+
+Browsing the notebook, staff, recruitment, graphs, programs, or development **does not pause**. The clock and pause button remain visible and usable above open windows. Manual pauses remain paused when a window closes. Referee decisions and program milestones pause explicitly and offer a Resume/Continue button. The pause button turns amber whenever the simulation stops.
+
+The resource graph records daily funds, typed raw data, evidence, and publication income for up to 720 days.
+
+## Saves and controls
+
+Version 4 has five named manual slots and a separate autosave:
+
+- `fieldwork_autosave_v4.json`
+- `fieldwork_slot_1_v4.json` through `fieldwork_slot_5_v4.json`
+
+Files live in Godot's game-specific `user://` folder. Use **Project → Open User Data Folder** in the editor to locate it. Autosave runs every five lab days, on return to the main menu, and on quitting an active lab. Loading restores paused and preserves pending referee/milestone feedback. Earlier save formats are not listed or imported.
 
 | Action | Control |
 | --- | --- |
-| Pause / resume | Space or top play/pause icon |
-| Speed | 1, 2, 3 for 1x, 2x, 4x |
-| Pause menu / close popup | Esc |
-| Place desk or experiment | Build card's plus icon, then a valid floor tile |
+| Pause / resume | Space or top button |
+| Speed | 1, 2, 3 |
+| Pause menu / close window | Esc |
+| Place furniture | Build card's plus, then valid tile |
 | Cancel placement | Esc or right-click |
-| Inspect | Click a person, desk, or experiment |
-| Larger map area | People icon in the laboratory heading hides/shows management |
+| Inspect | Click a person, desk, bed, or experiment |
+| Research / archive | Target icon |
+| Development | Tree icon |
 | Save chooser | Cmd+S / Ctrl+S or pause menu |
-| Resource history | Chart icon or pause menu |
-| Help | H or information icon |
+| Resource history | Chart icon |
+| Help | H or info icon |
 
-## Project and checks
+## Project and verification
 
-- `scripts/simulation.gd`: hourly agents, resources, papers, navigation, and saves.
-- `scripts/catalog.gd`: fields, equipment, staff traits, journal tiers, and developments.
-- `scripts/lab_layout.gd`: fixed rooms, furniture footprints, chairs, and interaction cells.
-- `scripts/lab_floor.gd`: map drawing, animated equipment, staff movement, and selection.
-- `scripts/main.gd`, `ui_kit.gd`: management interface and menus.
-- `scripts/portrait.gd`, `schedule_view.gd`, `resource_chart.gd`: portraits, timeline, and history graph.
-- `scripts/lab_events.gd`: contextual flavor templates and recent-template filtering.
-- `docs/design-plan.md`: mechanics, balance notes, and next playtest questions.
-
-Run from this folder:
+Game rules live in `scripts/simulation.gd` and `catalog.gd`. Program criteria are in `research_programs.gd`; physical rooms and footprints in `lab_layout.gd`. UI components include `main.gd`, `tech_tree_view.gd`, `notebook_view.gd`, `portrait.gd`, `schedule_view.gd`, and `resource_chart.gd`. `appearance.gd` keeps portrait and floor appearances consistent.
 
 ```sh
 /Applications/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tests/test_simulation.gd
+/Applications/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tests/test_progression.gd
 /Applications/Godot.app/Contents/MacOS/Godot --path . --script res://tests/test_ui.gd
 ```
 
-The interface suite renders screenshots into `docs/screenshots/`; add `--headless` to skip image capture. Tests disable autosave and use separate temporary test slots. Both suites return a nonzero exit code on failed assertions.
+The UI suite renders into ignored `docs/screenshots/`; add `--headless` to skip captures. Tests disable autosave and use temporary test files. See `docs/design-plan.md` for validation and playtest notes.
 
-**Verification:** 514 simulation checks and 114 interface checks pass, including rendered navigation, publication results, graphs, and full save menus.
+The repository uses `main`, with [Alecompa/physics-lab-managment-game](https://github.com/Alecompa/physics-lab-managment-game) configured as `origin`. Source assets, import settings, and `.gd.uid` files are tracked; editor caches, exports, and generated screenshots are ignored.
 
-This is still a prototype: staff collisions are simplified, the building cannot expand, and the economy and travel times need player feedback.
-
-## Version control
-
-The local Git repository uses `main`. Godot source assets, their import settings, and `.gd.uid` files are tracked. Editor caches, exports, temporary test saves, and generated screenshots are ignored. The README preview is a curated tracked image; older screenshots remain locally in `docs/archive/`.
-
-After a change, run the relevant checks above and inspect `git diff` before committing. The `origin` remote is [Alecompa/physics-lab-managment-game](https://github.com/Alecompa/physics-lab-managment-game).
+Verified in Godot 4.7.2: **509 core simulation checks, 238 progression checks, and 131 interface checks** passed.

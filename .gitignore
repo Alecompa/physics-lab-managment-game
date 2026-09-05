@@ -11,7 +11,7 @@ tests/.test_*
 tests/.ui_test_*
 
 # Generated UI captures and previous iteration reference images
-# The curated docs/prototype-v3.png remains tracked for the README.
+# The curated docs/prototype-v4.png remains tracked for the README.
 docs/screenshots/
 docs/archive/
 docs/*.png.import

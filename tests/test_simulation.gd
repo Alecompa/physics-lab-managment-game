@@ -131,12 +131,14 @@ func run_tests() -> void:
 	sim.lifetime_impact = 20
 	var income = sim.income()
 	check(not sim.unlock_upgrade("quantum_lab"), "Development prerequisites are enforced")
+	sim.unlocked.append_array(["precision", "module_slots"])
 	check(sim.unlock_upgrade("mixed_mode") and sim.prestige == 17, "Unlock spends exactly the listed impact")
 	check(sim.lifetime_impact == 20 and sim.income() == income, "Spending impact leaves lifetime reputation and support unchanged")
 	check(not sim.unlock_upgrade("mixed_mode"), "An unlock cannot be purchased twice")
 	check(sim.output_mix(sim.experiments[0]).size() == 1, "Mixed-mode requires an equipment upgrade too")
 	sim.upgrade_experiment(1)
 	check(sim.output_mix(sim.experiments[0]) == {"optics": 0.75, "quantum": 0.25}, "Level 2 splits output 75/25")
+	sim.unlocked.append("advanced_instruments")
 	sim.upgrade_experiment(1)
 	check(sim.output_mix(sim.experiments[0]) == {"optics": 0.6, "quantum": 0.4}, "Level 3 splits output 60/40")
 	check(not sim.upgrade_experiment(1), "Level 3 remains the upgrade cap")
@@ -155,6 +157,7 @@ func run_tests() -> void:
 	check(not sim.refresh_ideas(), "Board refresh is locked before journal club")
 	sim.prestige = 2
 	sim.lifetime_impact = 2
+	sim.unlocked.append("desk_systems")
 	sim.unlock_upgrade("journal_club")
 	check(sim.refresh_ideas() and sim.study_points == 10 and sim.ideas.size() == 6, "Journal club refresh consumes 12 study and replaces the board")
 	sim.discard_idea(sim.ideas[0].id)
@@ -228,16 +231,16 @@ func run_tests() -> void:
 	check(sim.analyzed_by_field.optics == 46 and sim.analyzed_by_field.quantum == 82, "Cross-field commitment spends the displayed 75/25 dataset")
 	sim.cancel_paper()
 	check(sim.analyzed_by_field.optics == 100 and sim.analyzed_by_field.quantum == 100, "Shelving refunds the exact committed data in both fields")
-	# Save fidelity, deterministic review and safe migration from the first prototype.
+	# Save fidelity, deterministic review and fresh-save validation.
 	reset_lab()
 	sim.analyzed_by_field.optics = 50
 	sim.start_paper(sim.ideas[0].id, 1.5)
 	run_hours(3)
 	var saved = sim.snapshot()
 	var path = "res://tests/.test_save.json"
-	check(sim.save_lab(false, path), "Version 3 save writes atomically")
+	check(sim.save_lab(false, path), "Version 4 save writes atomically")
 	sim.funds = 0
-	check(sim.load_lab(path), "Version 3 save loads")
+	check(sim.load_lab(path), "Version 4 save loads")
 	check(sim.funds == saved.funds and sim.hour == saved.hour and sim.staff[0].trait == saved.staff[0].trait and sim.staff[0].energy == saved.staff[0].energy, "Save preserves finances, clock, traits and individual energy")
 	check(sim.active_paper.review_roll == saved.active_paper.review_roll and sim.active_paper.committed == saved.active_paper.committed, "Save preserves fixed review roll and exact commitment")
 	sim.active_paper.stage = "review"
@@ -261,11 +264,6 @@ func run_tests() -> void:
 	file.close()
 	cash = sim.funds
 	check(not sim.load_lab(path) and sim.funds == cash, "Corrupt save leaves the current lab unchanged")
-	var legacy = {"version": 1, "funds": 12000, "raw_data": 20, "analyzed_data": 30, "prestige": 4, "published": 2, "day": 40, "staff": [{"id": 1, "name": "Legacy Student", "role": "phd", "allocation": 0.5}], "experiments": [{"id": 1, "kind": "optics", "x": 2, "y": 2, "level": 2, "condition": 90}], "active_paper": {"kind": "letter", "progress": 5}}
-	var migrated = sim.migrate_v1(legacy)
-	check(sim.valid_save(migrated), "Original prototype save migrates to a valid version 3 state")
-	check(migrated.analyzed_by_field.optics == 54 and migrated.raw_by_field.optics == 20, "Legacy data becomes optics and original paper commitment is returned")
-	check(migrated.staff[0].name == "Legacy Student" and migrated.staff[0].acquire == 8, "Legacy staff names and allocations migrate into schedules")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	# Named slots preserve furniture, graphs, flavor state and rarity protection.
 	reset_lab()
@@ -298,14 +296,6 @@ func run_tests() -> void:
 			check(sim.recent_flavor.back() != last_key, "Flavor does not repeat its previous template")
 			last_key = sim.recent_flavor.back()
 	check([sim.funds, sim.raw_data, sim.analyzed_data, sim.prestige, sim.rng.state] == economy, "Flavor cannot change economy or publication randomness")
-	var v2 = sim.snapshot()
-	v2.version = 2
-	v2.experiments[0].x = 2
-	v2.experiments[0].y = 2
-	var converted = sim.migrate_v2(v2)
-	check(sim.valid_save(converted) and converted.staff.size() == 3 and converted.funds == sim.funds, "Previous version remaps physical objects and preserves finances")
-	v2.staff[0].energy = "broken"
-	check(sim.migrate_v2(v2).is_empty(), "Malformed legacy staff rejected before migration")
 	reset_lab()
 	var crowded = sim.snapshot()
 	crowded.desks.append({"id": 4, "kind": "desk", "x": 2, "y": 10})
@@ -387,7 +377,7 @@ func run_tests() -> void:
 	check(is_equal_approx(sim.analyzed_by_field.optics, base_analysis * 1.25), "Analysis cluster raises actual analysis by 25%")
 	person.rest = 24
 	person.analyze = 0
-	person.x = 14
+	person.x = 13
 	person.y = 11
 	person.energy = 20
 	person.destination = []
