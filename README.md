@@ -107,4 +107,4 @@ This is still a prototype: staff collisions are simplified, the building cannot 
 
 The local Git repository uses `main`. Godot source assets, their import settings, and `.gd.uid` files are tracked. Editor caches, exports, temporary test saves, and generated screenshots are ignored. The README preview is a curated tracked image; older screenshots remain locally in `docs/archive/`.
 
-After a change, run the relevant checks above and inspect `git diff` before committing. No remote repository is configured.
+After a change, run the relevant checks above and inspect `git diff` before committing. The `origin` remote is [Alecompa/physics-lab-managment-game](https://github.com/Alecompa/physics-lab-managment-game).
