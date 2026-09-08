@@ -692,7 +692,10 @@ func _show_main_menu() -> void:
 	card.add_child(U.button("Load laboratory", _load_menu, "load"))
 	card.add_child(U.button("How to play", _help, "info"))
 	card.add_child(U.button("Display settings", _display_settings, "menu"))
-	card.add_child(U.button("Quit", func(): get_tree().quit(), "close"))
+	if OS.has_feature("web"):
+		card.add_child(U.label("Browser saves stay on this device. Save before closing the tab.", 12, U.MUTED, true))
+	else:
+		card.add_child(U.button("Quit", func(): get_tree().quit(), "close"))
 
 func _new_game_menu() -> void:
 	var content = _open_modal("New laboratory", 760)
@@ -785,7 +788,7 @@ func _show_pause_menu() -> void:
 	card.add_child(U.button("Guide", _tutorial_window, "info"))
 	card.add_child(U.button("Resource history", _statistics, "chart"))
 	card.add_child(U.button("Return to main menu", _return_to_main, "back"))
-	card.add_child(U.button("Save and quit", _quit_game, "close"))
+	if not OS.has_feature("web"): card.add_child(U.button("Save and quit", _quit_game, "close"))
 
 func _resume_from_menu() -> void:
 	_drop_menu()
@@ -1398,7 +1401,8 @@ func _load_display_settings() -> void:
 	var scale_value = config.get_value("display", "scale", 1.0)
 	if (scale_value is float or scale_value is int) and is_finite(scale_value): ui_scale = clampf(scale_value, 1.0, 1.3)
 	get_window().content_scale_factor = ui_scale
-	if config.get_value("display", "fullscreen", false) == true: get_window().mode = Window.MODE_FULLSCREEN
+	# Browsers require a fresh user gesture to enter fullscreen.
+	if not OS.has_feature("web") and config.get_value("display", "fullscreen", false) == true: get_window().mode = Window.MODE_FULLSCREEN
 
 func _apply_responsive_layout() -> void:
 	if not is_instance_valid(compact_toolbar) or not is_instance_valid(side_panel): return

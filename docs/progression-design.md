@@ -4,6 +4,8 @@ Stato: blocco 1 implementato e ribilanciato dopo il primo feedback umano. I bloc
 
 Sintesi per i giocatori: [roadmap](roadmap.md). Modifiche della versione attuale: [note della versione 5](releases/iteration-5.md).
 
+La versione 5 è disponibile anche come build browser per itch.io; lo sviluppatore ne ha confermato la pubblicazione. Preset, procedura di export e controlli su salvataggi, fullscreen e UI web sono nella [guida di pubblicazione](publishing-itch.md). La distribuzione web non cambia i criteri di playtest per passare al blocco 2.
+
 ## Obiettivo
 
 I paper producono solo impact. I fondi provengono dai grant assegnati e dal contributo universitario. Il tempo dei ricercatori deve essere conteso fra scrittura, studio e proposal. Un laboratorio prudente deve superare i primi 75 giorni, equivalenti a un'ora a 1× senza pause. L'autonomia tende a 60 giorni, oscillando con premi e investimenti.

@@ -8,6 +8,8 @@ Double-click **Play.command**, or open **project.godot** in Godot and press **F5
 
 The funding update uses separate version-5 saves. Version-4 files remain on disk and are not imported or overwritten. See [the progression design and playtest plan](docs/progression-design.md).
 
+The version-5 browser build has been published on itch.io, as confirmed by the developer. Rebuild it with `python3 tools/export_web.py`; the upload package is `exports/fieldwork-v5-web-itch.zip`. See the [export and publishing guide](docs/publishing-itch.md) for template setup, local preview and upload settings. Browser saves are local to the browser profile and separate from desktop saves.
+
 Choose a lab name and one research program at the beginning of the run. The game starts paused. **Space** pauses/resumes, and **1 / 2 / 3** select **1x / 2x / 4x**. Days remain **48 seconds at 1x**; paper evidence and writing requirements, review times, and evidence commitments are unchanged.
 
 ![Grant-funded laboratory](docs/funding-overview.png)

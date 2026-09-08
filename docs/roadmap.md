@@ -2,6 +2,8 @@
 
 Aggiornata l'8 settembre 2026. La versione 5 è implementata e in playtest. I numeri dei blocchi descrivono l'ordine di lavoro; non sono numeri di versione né date di uscita.
 
+Disponibile anche in versione browser su itch.io, con pubblicazione confermata dallo sviluppatore. [Export e aggiornamenti della build web](publishing-itch.md).
+
 ![Roadmap di Fieldwork: versione 5 in playtest e cinque blocchi successivi](fieldwork-roadmap-v5.png)
 
 La tabella seguente riporta anche in testo i contenuti dell'infografica.

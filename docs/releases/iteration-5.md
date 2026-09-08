@@ -30,6 +30,14 @@ I salvataggi v5 hanno file separati dai v4. I primi salvataggi v5 conservano cas
 
 Riavviare la copia del gioco in esecuzione per usare l'aggiornamento.
 
+## Versione browser
+
+Export web release per itch.io con Godot 4.7.2, renderer Compatibility e un solo thread. Il canvas si adatta alla finestra; PWA ed estensioni sono disattivate. La pubblicazione su itch.io è stata confermata dallo sviluppatore.
+
+Nel browser i pulsanti Quit e Save and quit sono nascosti. Return to main menu salva la partita; il menu ricorda che i salvataggi restano nel browser. Le preferenze di scala vengono ripristinate, mentre il fullscreen richiede un nuovo clic o tasto e non si attiva automaticamente al caricamento.
+
+Preset e script di packaging permettono di rigenerare `exports/fieldwork-v5-web-itch.zip`, con `index.html` nella radice. L'archivio contiene nove file e pesa circa 10,4 MB. Vedi [guida all'export, pubblicazione e verifica web](../publishing-itch.md).
+
 ## Verifica e lavoro successivo
 
 Passati 509 controlli di simulazione, 238 di progressione, 141 della UI esistente, 158 del funding, 191 del ribilanciamento e 62 della UI funding con rendering. Verificate tre risoluzioni, tre scale, fullscreen e persistenza delle preferenze.
