@@ -2,6 +2,10 @@
 
 Aggiornata l'8 settembre 2026. La versione 5 è implementata e in playtest. I numeri dei blocchi descrivono l'ordine di lavoro; non sono numeri di versione né date di uscita.
 
+![Roadmap di Fieldwork: versione 5 in playtest e cinque blocchi successivi](fieldwork-roadmap-v5.png)
+
+La tabella seguente riporta anche in testo i contenuti dell'infografica.
+
 | Blocco | Stato | Contenuti |
 | --- | --- | --- |
 | 1. Grant e nuova economia | Implementato nella versione 5, in playtest | Paper con solo impact; grant e contributo universitario; grant iniziale da $30.000; small da $14.000, 64 ore, ogni 20 giorni; rifiuti con lavoro recuperabile; bilancio e avvisi; tutorial, fullscreen e UI scalabile; grafica del laboratorio rinnovata. |
@@ -18,3 +22,4 @@ Il prossimo playtest riguarda soprattutto l'espansione moderata, la possibilità
 - [Design completo e criteri di passaggio](progression-design.md)
 - [Note della versione 5](releases/iteration-5.md)
 - [Risultati degli scenari economici controllati](playtest-block1.json)
+- [Prompt e metodo di generazione dell'infografica](roadmap-image-prompt.md)

@@ -146,6 +146,8 @@ Files live in Godot's game-specific `user://` folder. Use **Project → Open Use
 
 ## Development roadmap
 
+![Fieldwork version 5 and the six development blocks](docs/fieldwork-roadmap-v5.png)
+
 Iteration 5 implements the funding economy, onboarding, display options and visual refresh. It is in playtesting. The next planned blocks cover staff supervision and wear, starting specialization and lab expansion, training and visitors, choice events, and scientific rivals.
 
 See the [roadmap](docs/roadmap.md), [iteration-5 release notes](docs/releases/iteration-5.md), and [full design and playtest gates](docs/progression-design.md). Each block is tested and rebalanced before the next begins. Future release numbers and dates are not committed.
