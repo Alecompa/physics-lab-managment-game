@@ -9,9 +9,12 @@ exports/
 # Temporary test saves, including interrupted atomic writes
 tests/.test_*
 tests/.ui_test_*
+tests/.funding_save.json*
+tests/.balance_legacy_v5.json*
+tests/.display_test.cfg
 
 # Generated UI captures and previous iteration reference images
-# The curated docs/prototype-v4.png remains tracked for the README.
+# Curated documentation images remain tracked; test captures are ignored.
 docs/screenshots/
 docs/archive/
 docs/*.png.import

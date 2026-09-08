@@ -1,0 +1,1700 @@
+{
+	"engine": "Godot 4.7.2",
+	"expansion_day": 25,
+	"intro_draft_not_before_day": 30,
+	"recovery_policy": "Prioritize rejected small revisions; assign both researchers to proposals below 20 days runway",
+	"runs": [
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 53,
+			"forced_first_rejection": false,
+			"funds": 13579,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.736066017177982,
+					"day": 53,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 35,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "optics",
+			"intro_award_day": 35,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 19,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 18.0,
+			"papers": 4,
+			"proposal_hours": 306,
+			"seed": 1
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 54,
+			"forced_first_rejection": false,
+			"funds": 14797,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.776066017177982,
+					"day": 54,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 36,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "optics",
+			"intro_award_day": 36,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 23,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 18.0,
+			"papers": 9,
+			"proposal_hours": 305,
+			"seed": 2
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 54,
+			"forced_first_rejection": false,
+			"funds": 15152,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.776066017177982,
+					"day": 54,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 36,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "optics",
+			"intro_award_day": 36,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 18,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 18.0,
+			"papers": 11,
+			"proposal_hours": 305,
+			"seed": 3
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 53,
+			"forced_first_rejection": false,
+			"funds": 13718,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.746066017177982,
+					"day": 53,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 35,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "optics",
+			"intro_award_day": 35,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 23,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 17.9,
+			"papers": 6,
+			"proposal_hours": 307,
+			"seed": 4
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 53,
+			"forced_first_rejection": false,
+			"funds": 31846,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 32000.0,
+					"chance": 0.656066017177982,
+					"day": 72,
+					"hours": 240.0,
+					"kind": "standard",
+					"revision": false
+				},
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.806066017177982,
+					"day": 71,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": true
+				},
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.746066017177982,
+					"day": 53,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 35,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "optics",
+			"intro_award_day": 35,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 29,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 2.7,
+			"papers": 7,
+			"proposal_hours": 426,
+			"seed": 5
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 54,
+			"forced_first_rejection": false,
+			"funds": 135,
+			"grants": [
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.676066017177982,
+					"day": 73,
+					"hours": 240.0,
+					"kind": "standard",
+					"revision": false
+				},
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.826066017177982,
+					"day": 72,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": true
+				},
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.756066017177982,
+					"day": 54,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 35,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "optics",
+			"intro_award_day": 35,
+			"longest_ready_wait_hours": 12,
+			"milestones": [
+				{
+					"day": 26,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 0.3,
+			"papers": 8,
+			"proposal_hours": 448,
+			"seed": 6
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 53,
+			"forced_first_rejection": false,
+			"funds": 14357,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.761066017177982,
+					"day": 53,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 35,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "optics",
+			"intro_award_day": 35,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 39,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 17.5,
+			"papers": 9,
+			"proposal_hours": 310,
+			"seed": 7
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 54,
+			"forced_first_rejection": false,
+			"funds": 14779,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.766066017177982,
+					"day": 54,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 36,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "optics",
+			"intro_award_day": 36,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 18,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 18.0,
+			"papers": 10,
+			"proposal_hours": 305,
+			"seed": 8
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 54,
+			"forced_first_rejection": false,
+			"funds": 14556,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.756066017177982,
+					"day": 54,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 35,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "optics",
+			"intro_award_day": 36,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 23,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 18.5,
+			"papers": 9,
+			"proposal_hours": 305,
+			"seed": 9
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 53,
+			"forced_first_rejection": false,
+			"funds": 14003,
+			"grants": [
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.671066017177982,
+					"day": 73,
+					"hours": 240.0,
+					"kind": "standard",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.821066017177982,
+					"day": 72,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": true
+				},
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.746066017177982,
+					"day": 53,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 35,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "optics",
+			"intro_award_day": 35,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 31,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 3.4,
+			"papers": 6,
+			"proposal_hours": 426,
+			"seed": 10
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 53,
+			"forced_first_rejection": false,
+			"funds": 13354,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.726066017177982,
+					"day": 53,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 35,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "optics",
+			"intro_award_day": 35,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 29,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 17.9,
+			"papers": 4,
+			"proposal_hours": 307,
+			"seed": 11
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 53,
+			"forced_first_rejection": false,
+			"funds": 13578,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.726066017177982,
+					"day": 53,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 35,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "optics",
+			"intro_award_day": 35,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 23,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 17.9,
+			"papers": 4,
+			"proposal_hours": 306,
+			"seed": 12
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 51,
+			"forced_first_rejection": false,
+			"funds": 8915,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.736066017177982,
+					"day": 50,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 33,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "vacuum",
+			"intro_award_day": 33,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 19,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 14.2,
+			"papers": 3,
+			"proposal_hours": 448,
+			"seed": 1
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 51,
+			"forced_first_rejection": false,
+			"funds": 8873,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.736066017177982,
+					"day": 50,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 33,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "vacuum",
+			"intro_award_day": 33,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 23,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 14.1,
+			"papers": 3,
+			"proposal_hours": 448,
+			"seed": 2
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 51,
+			"forced_first_rejection": false,
+			"funds": 8909,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.736066017177982,
+					"day": 50,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 33,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "vacuum",
+			"intro_award_day": 33,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 18,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 14.2,
+			"papers": 3,
+			"proposal_hours": 448,
+			"seed": 3
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 51,
+			"forced_first_rejection": false,
+			"funds": 8451,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.726066017177982,
+					"day": 50,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 33,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "vacuum",
+			"intro_award_day": 33,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 23,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 13.3,
+			"papers": 2,
+			"proposal_hours": 448,
+			"seed": 4
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 51,
+			"forced_first_rejection": false,
+			"funds": 26494,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 32000.0,
+					"chance": 0.626066017177982,
+					"day": 66,
+					"hours": 240.0,
+					"kind": "standard",
+					"revision": false
+				},
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.776066017177982,
+					"day": 65,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": true
+				},
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.726066017177982,
+					"day": 50,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 33,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "vacuum",
+			"intro_award_day": 33,
+			"longest_ready_wait_hours": 4,
+			"milestones": [
+				{
+					"day": 29,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 0.5,
+			"papers": 2,
+			"proposal_hours": 470,
+			"seed": 5
+		},
+		{
+			"bankrupt": true,
+			"day": 67,
+			"first_ordinary_decision_day": 51,
+			"forced_first_rejection": false,
+			"funds": 0,
+			"grants": [
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.636066017177982,
+					"day": 66,
+					"hours": 240.0,
+					"kind": "standard",
+					"revision": false
+				},
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.786066017177982,
+					"day": 65,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": true
+				},
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.736066017177982,
+					"day": 50,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 33,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "vacuum",
+			"intro_award_day": 33,
+			"longest_ready_wait_hours": 1,
+			"milestones": [
+				{
+					"day": 26,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 0.0,
+			"papers": 3,
+			"proposal_hours": 417,
+			"seed": 6
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 51,
+			"forced_first_rejection": false,
+			"funds": 8297,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.726066017177982,
+					"day": 50,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 33,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "vacuum",
+			"intro_award_day": 33,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 36,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 13.2,
+			"papers": 2,
+			"proposal_hours": 448,
+			"seed": 7
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 51,
+			"forced_first_rejection": false,
+			"funds": 8925,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.736066017177982,
+					"day": 50,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 33,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "vacuum",
+			"intro_award_day": 33,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 18,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 14.3,
+			"papers": 3,
+			"proposal_hours": 448,
+			"seed": 8
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 51,
+			"forced_first_rejection": false,
+			"funds": 8842,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.736066017177982,
+					"day": 50,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 33,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "vacuum",
+			"intro_award_day": 33,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 23,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 14.1,
+			"papers": 3,
+			"proposal_hours": 448,
+			"seed": 9
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 51,
+			"forced_first_rejection": false,
+			"funds": 8443,
+			"grants": [
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.626066017177982,
+					"day": 66,
+					"hours": 240.0,
+					"kind": "standard",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.776066017177982,
+					"day": 65,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": true
+				},
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.726066017177982,
+					"day": 50,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 33,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "vacuum",
+			"intro_award_day": 33,
+			"longest_ready_wait_hours": 4,
+			"milestones": [
+				{
+					"day": 33,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 1.2,
+			"papers": 2,
+			"proposal_hours": 564,
+			"seed": 10
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 51,
+			"forced_first_rejection": false,
+			"funds": 8839,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.736066017177982,
+					"day": 50,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 33,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "vacuum",
+			"intro_award_day": 33,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 29,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 14.2,
+			"papers": 3,
+			"proposal_hours": 448,
+			"seed": 11
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 51,
+			"forced_first_rejection": false,
+			"funds": 8876,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.736066017177982,
+					"day": 50,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 33,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "vacuum",
+			"intro_award_day": 33,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 23,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 14.3,
+			"papers": 3,
+			"proposal_hours": 448,
+			"seed": 12
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 51,
+			"forced_first_rejection": true,
+			"funds": 40915,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 32000.0,
+					"chance": 0.636066017177982,
+					"day": 67,
+					"hours": 240.0,
+					"kind": "standard",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.786066017177982,
+					"day": 66,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": true
+				},
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.736066017177982,
+					"day": 50,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 33,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "vacuum",
+			"intro_award_day": 33,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 19,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 1.3,
+			"papers": 3,
+			"proposal_hours": 467,
+			"seed": 1
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 51,
+			"forced_first_rejection": true,
+			"funds": 26873,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 32000.0,
+					"chance": 0.636066017177982,
+					"day": 67,
+					"hours": 240.0,
+					"kind": "standard",
+					"revision": false
+				},
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.786066017177982,
+					"day": 66,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": true
+				},
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.736066017177982,
+					"day": 50,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 33,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "vacuum",
+			"intro_award_day": 33,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 23,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 0.3,
+			"papers": 3,
+			"proposal_hours": 467,
+			"seed": 2
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 51,
+			"forced_first_rejection": true,
+			"funds": 40909,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 32000.0,
+					"chance": 0.636066017177982,
+					"day": 67,
+					"hours": 240.0,
+					"kind": "standard",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.786066017177982,
+					"day": 66,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": true
+				},
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.736066017177982,
+					"day": 50,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 33,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "vacuum",
+			"intro_award_day": 33,
+			"longest_ready_wait_hours": 0,
+			"milestones": [
+				{
+					"day": 18,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 1.3,
+			"papers": 3,
+			"proposal_hours": 466,
+			"seed": 3
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 51,
+			"forced_first_rejection": true,
+			"funds": 8451,
+			"grants": [
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.626066017177982,
+					"day": 66,
+					"hours": 240.0,
+					"kind": "standard",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 14000.0,
+					"chance": 0.776066017177982,
+					"day": 65,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": true
+				},
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.726066017177982,
+					"day": 50,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 33,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "vacuum",
+			"intro_award_day": 33,
+			"longest_ready_wait_hours": 4,
+			"milestones": [
+				{
+					"day": 23,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 1.3,
+			"papers": 2,
+			"proposal_hours": 565,
+			"seed": 4
+		},
+		{
+			"bankrupt": false,
+			"day": 76,
+			"first_ordinary_decision_day": 51,
+			"forced_first_rejection": true,
+			"funds": 26494,
+			"grants": [
+				{
+					"accepted": true,
+					"amount": 32000.0,
+					"chance": 0.626066017177982,
+					"day": 66,
+					"hours": 240.0,
+					"kind": "standard",
+					"revision": false
+				},
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.776066017177982,
+					"day": 65,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": true
+				},
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.726066017177982,
+					"day": 50,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 33,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "vacuum",
+			"intro_award_day": 33,
+			"longest_ready_wait_hours": 4,
+			"milestones": [
+				{
+					"day": 29,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 0.5,
+			"papers": 2,
+			"proposal_hours": 470,
+			"seed": 5
+		},
+		{
+			"bankrupt": true,
+			"day": 67,
+			"first_ordinary_decision_day": 51,
+			"forced_first_rejection": true,
+			"funds": 0,
+			"grants": [
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.636066017177982,
+					"day": 66,
+					"hours": 240.0,
+					"kind": "standard",
+					"revision": false
+				},
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.786066017177982,
+					"day": 65,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": true
+				},
+				{
+					"accepted": false,
+					"amount": 0.0,
+					"chance": 0.736066017177982,
+					"day": 50,
+					"hours": 80.0,
+					"kind": "small",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 12000.0,
+					"chance": 1.0,
+					"day": 33,
+					"hours": 48.0,
+					"kind": "intro",
+					"revision": false
+				},
+				{
+					"accepted": true,
+					"amount": 30000.0,
+					"chance": 1.0,
+					"day": 1,
+					"hours": 0.0,
+					"kind": "startup",
+					"revision": false
+				}
+			],
+			"instrument": "vacuum",
+			"intro_award_day": 33,
+			"longest_ready_wait_hours": 1,
+			"milestones": [
+				{
+					"day": 26,
+					"stage": 1
+				}
+			],
+			"minimum_runway": 0.0,
+			"papers": 3,
+			"proposal_hours": 417,
+			"seed": 6
+		}
+	],
+	"scope": "Automated 75-day scenarios, not full-program or human validation",
+	"small_award": 14000,
+	"small_hours": 64,
+	"small_period": 20,
+	"starting_grant": 30000,
+	"survived": 28
+}

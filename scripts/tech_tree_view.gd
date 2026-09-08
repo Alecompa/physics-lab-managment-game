@@ -33,7 +33,7 @@ func refresh() -> void:
 		button.disabled = owned or blocked or simulation.prestige < spec.cost
 		button.tooltip_text = "Requires " + simulation.UPGRADES[spec.requires].name if blocked else ""
 		button.text = "Unlocked" if owned else "Locked / %d impact" % spec.cost if blocked else "%d impact" % spec.cost
-		controls[key].panel.add_theme_stylebox_override("panel", LabUI.box(Color("303c36") if owned else LabUI.CARD, LabUI.ACCENT if owned else LabUI.LINE, 10))
+		controls[key].panel.add_theme_stylebox_override("panel", LabUI.box(Color("174047") if owned else LabUI.CARD, LabUI.ACCENT if owned else LabUI.LINE, 10))
 	queue_redraw()
 func _draw() -> void:
 	var font = ThemeDB.fallback_font

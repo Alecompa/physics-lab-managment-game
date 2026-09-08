@@ -195,7 +195,7 @@ func run_tests() -> void:
 	check(sim.published == 1 and sim.pending_result.accepted, "Successful peer review publishes the paper")
 	check(sim.pending_result.title == idea.title and sim.pending_result.feedback != "", "Publication result includes a flavor title and referee feedback")
 	check(sim.paused and sim.prestige == 2 and sim.lifetime_impact == 2, "Publication pauses and awards available and lifetime impact")
-	check(sim.total_grants == 2600, "Publication grants are paid exactly once")
+	check(sim.total_grants == 30000, "Publication does not add to startup grant funding")
 	var stopped_hour = sim.hour
 	var stopped_day = sim.day
 	sim.paused = false
@@ -214,7 +214,7 @@ func run_tests() -> void:
 	sim.active_paper.review_left = 1
 	for member in sim.staff: member.rest = 24; member.acquire = 0; member.analyze = 0
 	sim.advance_hour()
-	check(not sim.pending_result.accepted and sim.published == 0 and sim.total_grants == 0, "Rejected paper earns no publication rewards")
+	check(not sim.pending_result.accepted and sim.published == 0 and sim.total_grants == 30000, "Rejected paper earns no publication rewards")
 	check(sim.analyzed_by_field.optics == 27 and not sim.idea_by_id(idea.id).is_empty(), "Rejection returns 75% of typed evidence and the original idea")
 	# Multi-field manuscript and exact cancellation refund.
 	reset_lab()
@@ -400,7 +400,7 @@ func run_tests() -> void:
 				if sim.ideas.size() >= 6: sim.discard_idea(sim.ideas.back().id)
 				sim.think_idea()
 		sim.advance_hour()
-	check(sim.published >= 5 and sim.rescue_count == 0, "A 160-day idea-and-review strategy remains playable without bailouts")
-	print("160-day playtest: %d papers, %d review decisions, %d lifetime impact, $%.0f funds." % [sim.published, decisions, sim.lifetime_impact, sim.funds])
+	check(sim.published >= 1 and sim.bankrupt and sim.day < 160 and sim.rescue_count == 0, "A paper-only strategy must seek grants before its cash runs out")
+	print("Paper-only stress test: %d papers, %d review decisions, %d lifetime impact, $%.0f funds." % [sim.published, decisions, sim.lifetime_impact, sim.funds])
 	print("Simulation checks: %d passed, %d failed." % [checks - failures, failures])
 	quit(1 if failures else 0)

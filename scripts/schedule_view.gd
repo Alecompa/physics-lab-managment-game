@@ -3,7 +3,7 @@ signal boundary_changed(block: String, hours: int)
 var person: Dictionary = {}
 var current_hour = 8
 var dragging = -1
-const COLORS = [Color("727e8c"), Color("91b8ad"), Color("94acbc"), Color("c8ab79")]
+const COLORS = [Color("7785ac"), Color("70c9b7"), Color("68aed1"), Color("dfb466")]
 func _ready() -> void:
 	custom_minimum_size = Vector2(300, 76)
 	mouse_default_cursor_shape = Control.CURSOR_HSIZE

@@ -44,6 +44,33 @@ func run_tests() -> void:
 	check(game.data_labels.size() == 4, "All four fields have counters")
 	check(game.clock_label.text.contains("08:00"), "Clock displays hour")
 	await capture("prototype-v4")
+	# Test visual signal lifecycles separately from window-system pointer position.
+	var button_rect = game.pause_button.get_global_rect()
+	game.pause_button.mouse_entered.emit()
+	await create_timer(0.22).timeout
+	check(game.pause_button.hover_amount > 0.9, "Hover signal animates the button glow")
+	check(game.pause_button.get_global_rect() == button_rect, "Button animation preserves layout and hit area")
+	game.pause_button.button_down.emit()
+	await create_timer(0.15).timeout
+	check(game.pause_button.press_amount > 0.9, "Press feedback animates while held")
+	game.pause_button.button_up.emit()
+	await create_timer(0.15).timeout
+	check(game.pause_button.press_amount < 0.1, "Button release clears press feedback")
+	game.pause_button.mouse_exited.emit()
+	await create_timer(0.22).timeout
+	check(game.pause_button.hover_amount < 0.1, "Hover glow settles after pointer exit")
+	# Route the click through the viewport, not the action callback.
+	var click_down = InputEventMouseButton.new()
+	click_down.button_index = MOUSE_BUTTON_LEFT
+	click_down.pressed = true
+	click_down.position = button_rect.get_center()
+	root.push_input(click_down)
+	var click_up = click_down.duplicate()
+	click_up.pressed = false
+	root.push_input(click_up)
+	check(not game.sim.paused, "Animated button receives clicks and resumes the lab")
+	game.sim.paused = true
+	game._refresh()
 	# Exercise real frame interpolation along corridors, with production and study visible.
 	game.sim.paused = false
 	game.sim.speed = 4
@@ -272,6 +299,33 @@ func run_tests() -> void:
 	check(modal_fits(), "Help fits window")
 	await capture("guide-v4")
 	game._close_modal()
+	# A furnished fixture renders all instrument families and attached modules.
+	game.sim.new_lab()
+	game.sim.funds = 90000
+	game.sim.unlocked = game.sim.UPGRADES.keys()
+	game.sim.choose_program("dark_matter")
+	for item in [["vacuum", Vector2i(5, 2)], ["detector", Vector2i(13, 2)], ["quantum", Vector2i(16, 2)]]:
+		check(game.sim.place_experiment(item[0], item[1]), "Equipment visual fixture has a valid physical footprint")
+	game.sim.install_module(game.sim.experiments[0].id, "accelerator")
+	game.sim.install_module(game.sim.experiments[0].id, "quantum")
+	game.sim.lab_name = "Physics Laboratory"
+	game._enter_lab()
+	for i in range(game.sim.staff.size()):
+		var member = game.sim.staff[i]
+		member.x = 4 + i * 5; member.y = 6
+		member.working = true; member.task = "acquire"
+		member.target_id = game.sim.experiments[i].id
+	game.floor_view.reset_positions()
+	game.floor_view.animation_time = 1.5
+	game._refresh()
+	await capture("lab-neon-equipped")
+	var full_size = root.size
+	root.size = Vector2i(1200, 800)
+	await settle()
+	check(game.game_ui.get_global_rect().end.x <= root.get_visible_rect().end.x + 1, "HUD remains inside the scaled minimum window")
+	await capture("lab-neon-small")
+	root.size = full_size
+	await settle()
 	game._return_to_main()
 	check(not game.session_active and game.menu_mode == "main", "Return to main menu leaves session")
 	print("UI checks: %d passed, %d failed." % [checks - failures, failures])

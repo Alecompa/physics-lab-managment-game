@@ -14,7 +14,7 @@ func _gui_input(event: InputEvent) -> void:
 		queue_redraw()
 func value(sample: Dictionary, field: String) -> float:
 	if metric in ["raw", "analyzed"]: return sample[metric][field]
-	return sample.get("grant_income", 0) if metric == "grants" else sample.funds
+	return sample.get("grant_income", 0) if metric == "grants" else sample.get(metric, 0)
 func _draw() -> void:
 	var history = data()
 	var font = ThemeDB.fallback_font
@@ -35,6 +35,7 @@ func _draw() -> void:
 		var color = Color(LabCatalog.FIELDS[field].color) if LabCatalog.FIELDS.has(field) else LabUI.ACCENT
 		var points = PackedVector2Array()
 		for index in range(history.size()): points.append(Vector2(plot.position.x + plot.size.x * index / (history.size() - 1), plot.end.y - plot.size.y * value(history[index], field) / maximum))
+		draw_polyline(points, Color(color, 0.10), 6, true)
 		draw_polyline(points, color, 2, true)
 		if hovered >= 0 and hovered < history.size(): draw_circle(points[hovered], 4, color)
 	for index in [0, history.size() - 1]:

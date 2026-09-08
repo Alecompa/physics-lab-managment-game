@@ -9,7 +9,9 @@ func _draw() -> void:
 	var look = StaffAppearance.of(person)
 	var s = size.x / 64.0
 	var c = size * Vector2(0.5, 0.4)
-	draw_style_box(LabUI.box(look.shirt.darkened(0.48), LabUI.LINE, 0, 7), Rect2(Vector2.ZERO, size))
+	draw_style_box(LabUI.box(Color("18313e"), LabUI.LINE, 0, 7), Rect2(Vector2.ZERO, size))
+	draw_arc(c + Vector2(0, 6) * s, 26 * s, 0, TAU, 40, Color(LabUI.ACCENT, 0.18), 1, true)
+	for y in range(6, int(size.y), 8): draw_line(Vector2(4, y), Vector2(size.x - 4, y), Color(0.3, 0.6, 0.7, 0.035), 1)
 	var width = 27 if look.wide else 23
 	draw_circle(c + Vector2(0, 34) * s, width * s, look.shirt)
 	if person.role == "researcher":
@@ -30,3 +32,5 @@ func _draw() -> void:
 	if look.glasses: draw_line(c + Vector2(-1, 2) * s, c + Vector2(1, 2) * s, Color("343c40"), 1.2 * s)
 	draw_line(c + Vector2(-3, 11) * s, c + Vector2(4, 11) * s, look.skin.darkened(0.35), 1.4 * s)
 	draw_rect(Rect2(c + Vector2(10, 32) * s, Vector2(7, 10) * s), Color(LabCatalog.FIELDS[person.specialty].color))
+
+	draw_line(Vector2(8, size.y - 2), Vector2(size.x - 8, size.y - 2), Color(LabCatalog.FIELDS[person.specialty].color), 2)

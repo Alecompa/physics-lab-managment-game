@@ -2,6 +2,9 @@ class_name LabSimulation
 extends Node
 ## Hourly agents, typed evidence, paper ideas, review and permanent development.
 
+signal grants_changed
+signal funding_resolved
+signal insolvency
 signal updated
 signal announcement(message: String)
 signal paper_resolved(result: Dictionary)
@@ -9,6 +12,7 @@ signal ideas_changed
 signal idea_discovered(idea: Dictionary)
 signal progression_changed
 
+const Funding = preload("res://scripts/grant_rules.gd")
 const Programs = preload("res://scripts/research_programs.gd")
 
 const Layout = preload("res://scripts/lab_layout.gd")
@@ -19,13 +23,24 @@ const EQUIPMENT = Catalog.EQUIPMENT
 const ROLES = Catalog.ROLES
 const JOURNALS = Catalog.JOURNALS
 const UPGRADES = Catalog.UPGRADES
-const SAVE_PATH = "user://fieldwork_autosave_v4.json"
+const SAVE_PATH = "user://fieldwork_autosave_v5.json"
 const GRID_SIZE = Layout.SIZE
 const DAY_SECONDS = 48.0
 const HOUR_SECONDS = DAY_SECONDS / 24.0
 const WALK_SPEED = 4.0
 
-var funds = 14500.0
+var proposals: Array = []
+var grant_history: Array = []
+var grant_results: Array = []
+var grant_next_days: Dictionary = {"small": 1, "standard": 1, "large": 1}
+var grant_rng = RandomNumberGenerator.new()
+var intro_grant_completed = false
+var first_submission_day = 0
+var last_publication_day = 1
+var total_proposal_hours = 0.0
+var tutorial_enabled = true
+var bankrupt = false
+var funds = 30000.0
 var raw_by_field: Dictionary = {}
 var analyzed_by_field: Dictionary = {}
 var raw_data: float:
@@ -87,7 +102,18 @@ func total(pool: Dictionary) -> float:
 func new_lab() -> void:
 	rng.randomize()
 	flavor_rng.randomize()
-	funds = 14500.0
+	grant_rng.randomize()
+	proposals = []
+	grant_history = [{"kind": "startup", "day": 1, "accepted": true, "amount": 30000.0, "chance": 1.0, "hours": 0.0, "revision": false}]
+	grant_results = []
+	grant_next_days = {"small": 1, "standard": 1, "large": 1}
+	intro_grant_completed = false
+	first_submission_day = 0
+	last_publication_day = 1
+	total_proposal_hours = 0.0
+	tutorial_enabled = true
+	bankrupt = false
+	funds = 30000.0
 	raw_by_field = empty_data()
 	analyzed_by_field = empty_data()
 	prestige = 0
@@ -130,7 +156,7 @@ func new_lab() -> void:
 	unlocked = []
 	history = []
 	log_entries = []
-	total_grants = 0.0
+	total_grants = 30000.0
 	rescue_count = 0
 	study_points = 0.0
 	last_produced = 0.0
@@ -143,7 +169,7 @@ func new_lab() -> void:
 	for role in ROLES: candidates[role] = make_person(next_staff_id + ROLES.keys().find(role), role)
 	rebuild_navigation()
 	record_resources()
-	announce("The lab opens. The optical bench is ready for its first measurements.")
+	announce("Startup grant awarded: $30,000. Collect, analyze and submit a paper to qualify for the introductory grant.")
 	updated.emit()
 
 func make_person(id: int, role: String) -> Dictionary:
@@ -156,9 +182,9 @@ func make_person(id: int, role: String) -> Dictionary:
 		"focus": "any", "experiment": -1, "energy": 100.0, "x": float(Layout.ENTRANCE.x), "y": float(Layout.ENTRANCE.y), "bed": -1, "appearance": rng.randi_range(0, 999999), "desk": -1, "motion": [], "working": false, "last_field": "", "route": [], "destination": [], "status": "Ready", "task": "rest", "target_id": -1}
 
 func _process(delta: float) -> void:
-	if paused or not pending_result.is_empty() or not pending_milestone.is_empty(): return
+	if paused or feedback_blocked(): return
 	accumulated_time += delta * speed
-	while accumulated_time >= HOUR_SECONDS and not paused and pending_result.is_empty() and pending_milestone.is_empty():
+	while accumulated_time >= HOUR_SECONDS and not paused and not feedback_blocked():
 		accumulated_time -= HOUR_SECONDS
 		advance_hour()
 	if paused: accumulated_time = 0.0
@@ -199,7 +225,7 @@ func set_assignment(id: int, key: String, value: Variant) -> void:
 	for person in staff:
 		if person.id != id: continue
 		if key == "focus" and (value == "any" or FIELDS.has(value)): person.focus = value
-		if key == "duty" and value in ["auto", "write", "study", "maintain"]: person.duty = value
+		if key == "duty" and (value in ["auto", "write", "study", "maintain"] or value == "proposal" and person.role == "researcher"): person.duty = value
 		if key == "bed":
 			if value == -1 or not bed_by_id(value).is_empty() and bed_owner(value) in [-1, id]: person.bed = value
 		if key == "desk" and (value == -1 or not desk_by_id(value).is_empty()): person.desk = value
@@ -246,7 +272,7 @@ func writing_power() -> float:
 	return amount
 
 func income() -> float:
-	return 60.0 + lifetime_impact * 3.0
+	return 120.0 + minf(120.0, lifetime_impact * 4.0) * publication_activity()
 
 func expenses() -> float:
 	var amount = 0.0
@@ -361,7 +387,6 @@ func remove_desk(id: int) -> bool:
 	var desk = desk_by_id(id)
 	if desk.is_empty(): return false
 	desks.erase(desk)
-	funds += 210
 	for person in staff:
 		if person.get("desk", -1) == id: person.desk = -1
 	rebuild_navigation()
@@ -414,7 +439,7 @@ func choose_experiment(person: Dictionary, maintaining: bool = false) -> Diction
 
 func advance_hour() -> void:
 	# The pending feedback is a hard simulation stop, including direct test calls.
-	if not pending_result.is_empty() or not pending_milestone.is_empty(): return
+	if feedback_blocked(): return
 	var capacities = {}
 	var occupancy = {}
 	var desk_reservations = {}
@@ -434,7 +459,7 @@ func advance_hour() -> void:
 		var sleeping_bed = reachable_bed(person) if task == "rest" else {}
 		if not sleeping_bed.is_empty(): target = Layout.bed_access(sleeping_bed)
 		var desk_factor = 1.0
-		if task in ["analyze", "write", "study"]:
+		if task in ["analyze", "write", "study", "proposal"]:
 			var desk = choose_desk(person, desk_reservations)
 			if desk.is_empty():
 				person.status = "Waiting: no free, reachable desk"
@@ -497,6 +522,20 @@ func advance_hour() -> void:
 				person.last_field = active_paper.field
 				last_written += work
 				person.status = "Writing " + FIELDS[active_paper.field].name
+			"proposal":
+				var proposal = writing_proposal()
+				if person.role != "researcher" or proposal.is_empty():
+					person.working = false
+					person.status = "No proposal to write; choose Auto to write papers or study"
+					continue
+				var work = minf(time_left * desk_factor * performance(person, "write"), proposal.work - proposal.progress)
+				proposal.progress += work
+				total_proposal_hours += work
+				person.status = "Preparing " + Funding.SPECS[proposal.kind].name
+				if proposal.progress >= proposal.work - 0.00001:
+					proposal.stage = "ready"
+					announce("Proposal ready. Open Grants to check the estimate and submit.")
+					grants_changed.emit()
 			"study":
 				study_points += time_left * desk_factor * (0.35 if person.role == "researcher" else 0.12) * performance(person, task, person.specialty)
 				person.status = "Studying " + FIELDS[person.specialty].name
@@ -509,20 +548,23 @@ func advance_hour() -> void:
 			if active_paper.review_left <= 0: resolve_review()
 		elif active_paper.progress >= active_paper.work - 0.00001:
 			active_paper.stage = "review"
+			if first_submission_day == 0: first_submission_day = day
 			announce("Submitted '%s'. Peer review has begun." % active_paper.title)
+	advance_grant_reviews()
+	funds += (income() - expenses()) / 24.0
+	if funds < 0:
+		funds = 0.0
+		bankrupt = true
+		paused = true
+		accumulated_time = 0.0
+		announce("The laboratory is insolvent. Review the budget, load a save or start a new laboratory.")
+		insolvency.emit()
 	maybe_flavor_event()
 	hour += 1
 	if hour >= 24:
 		hour = 0
 		day += 1
 		for experiment in experiments: experiment.condition = maxf(35.0, experiment.condition - 0.45)
-		funds += income() - expenses()
-		if funds < 0:
-			rescue_count += 1
-			funds += 4000
-			prestige = maxi(0, prestige - 2)
-			paused = true
-			announce("University rescue: $4,000 added, 2 available impact spent. Review your budget before resuming.")
 		record_resources()
 		autosave_days += 1
 		last_produced = 0.0
@@ -536,7 +578,7 @@ func advance_hour() -> void:
 func advance_day() -> void:
 	for i in range(24):
 		advance_hour()
-		if not pending_result.is_empty(): break
+		if feedback_blocked(): break
 
 func experiment_at(cell: Vector2i) -> Dictionary:
 	for experiment in experiments:
@@ -595,7 +637,6 @@ func service_experiment(id: int) -> bool:
 func remove_experiment(id: int) -> bool:
 	var experiment = experiment_by_id(id)
 	if experiment.is_empty(): return false
-	funds += EQUIPMENT[experiment.kind].cost * 0.35
 	experiments.erase(experiment)
 	for person in staff:
 		if person.experiment == id: person.experiment = -1
@@ -712,10 +753,9 @@ func resolve_review() -> void:
 	if active_paper.is_empty(): return
 	var accepted = active_paper.review_roll < active_paper.chance
 	var spec = JOURNALS[active_paper.kind]
-	pending_result = {"title": active_paper.title, "field": active_paper.field, "secondary": active_paper.secondary, "program_goal": active_paper.get("program_goal", ""), "paper_id": active_paper.id, "kind": active_paper.kind, "accepted": accepted, "chance": active_paper.chance, "day": day, "impact": spec.impact if accepted else 0, "grant": spec.grant if accepted else 0, "feedback": "The referees found the evidence convincing and the method reproducible." if accepted else "The referees requested a stronger dataset. 75% of each committed data type has been returned. The idea is available to try again."}
+	pending_result = {"title": active_paper.title, "field": active_paper.field, "secondary": active_paper.secondary, "program_goal": active_paper.get("program_goal", ""), "paper_id": active_paper.id, "kind": active_paper.kind, "accepted": accepted, "chance": active_paper.chance, "day": day, "impact": spec.impact if accepted else 0, "feedback": "The referees found the evidence convincing and the method reproducible." if accepted else "The referees requested a stronger dataset. 75% of each committed data type has been returned. The idea is available to try again."}
 	if accepted:
-		funds += spec.grant
-		total_grants += spec.grant
+		last_publication_day = day
 		prestige += spec.impact
 		lifetime_impact += spec.impact
 		published += 1
@@ -772,8 +812,8 @@ func announce(message: String) -> void:
 	announcement.emit(message)
 
 func snapshot() -> Dictionary:
-	var result = {"version": 4, "rng_state": str(rng.state), "rng_seed": str(rng.seed), "flavor_state": str(flavor_rng.state), "flavor_seed": str(flavor_rng.seed), "saved_at": Time.get_datetime_string_from_system()}
-	for key in ["funds", "raw_by_field", "analyzed_by_field", "prestige", "lifetime_impact", "published", "day", "hour", "experiments", "staff", "candidates", "active_paper", "pending_result", "ideas", "unlocked", "history", "log_entries", "next_staff_id", "next_experiment_id", "next_idea_id", "total_grants", "rescue_count", "study_points", "desks", "next_desk_id", "lab_name", "resource_history", "recent_flavor", "next_flavor_hour", "discoveries_without_legendary", "beds", "next_bed_id", "research_program", "program_level", "pending_milestone"]:
+	var result = {"version": 5, "grant_rng_state": str(grant_rng.state), "grant_rng_seed": str(grant_rng.seed), "rng_state": str(rng.state), "rng_seed": str(rng.seed), "flavor_state": str(flavor_rng.state), "flavor_seed": str(flavor_rng.seed), "saved_at": Time.get_datetime_string_from_system()}
+	for key in ["funds", "raw_by_field", "analyzed_by_field", "prestige", "lifetime_impact", "published", "day", "hour", "experiments", "staff", "candidates", "active_paper", "pending_result", "ideas", "unlocked", "history", "log_entries", "next_staff_id", "next_experiment_id", "next_idea_id", "total_grants", "rescue_count", "study_points", "desks", "next_desk_id", "lab_name", "resource_history", "recent_flavor", "next_flavor_hour", "discoveries_without_legendary", "beds", "next_bed_id", "research_program", "program_level", "pending_milestone", "proposals", "grant_history", "grant_results", "grant_next_days", "intro_grant_completed", "first_submission_day", "last_publication_day", "total_proposal_hours", "tutorial_enabled", "bankrupt"]:
 		var value = get(key)
 		result[key] = value.duplicate(true) if value is Dictionary or value is Array else value
 	return result
@@ -801,16 +841,24 @@ func load_lab(path: String = SAVE_PATH) -> bool:
 	if not valid_save(data):
 		announce("Invalid save. Your current lab is unchanged.")
 		return false
+	# Early v5 builds made the introductory award consume a small call.
+	# Remove that wait only when no ordinary small has ever been submitted.
+	var used_small = data.grant_history.any(func(result): return result.kind == "small") or data.proposals.any(func(proposal): return proposal.kind == "small" and proposal.submitted > 0)
+	if not used_small: data.grant_next_days.small = 1
 	for key in snapshot():
-		if key not in ["version", "rng_state", "rng_seed", "flavor_state", "flavor_seed", "saved_at"]: set(key, data[key])
+		if key not in ["version", "rng_state", "rng_seed", "flavor_state", "flavor_seed", "grant_rng_state", "grant_rng_seed", "saved_at"]: set(key, data[key])
 	for key in ["prestige", "lifetime_impact", "published", "day", "hour", "next_staff_id", "next_experiment_id", "next_idea_id", "rescue_count", "next_desk_id", "next_flavor_hour", "discoveries_without_legendary", "next_bed_id", "program_level"]:
 		set(key, int(get(key)))
 	for person in staff + candidates.values():
 		for key in ["id", "rest", "acquire", "analyze", "experiment", "desk", "bed"]: person[key] = int(person[key])
+	for proposal in proposals:
+		if not proposal.has("review_duration"): proposal.review_duration = 120 if proposal.kind == "intro" and proposal.review_left > 24 else Funding.SPECS[proposal.kind].review
 	for object in desks + beds:
 		for key in ["id", "x", "y"]: object[key] = int(object[key])
 	for experiment in experiments:
 		for key in ["id", "x", "y", "level"]: experiment[key] = int(experiment[key])
+	grant_rng.seed = int(data.grant_rng_seed)
+	grant_rng.state = int(data.grant_rng_state)
 	rng.seed = int(data.rng_seed)
 	rng.state = int(data.rng_state)
 	flavor_rng.seed = int(data.flavor_seed)
@@ -831,9 +879,10 @@ func numeric(value: Variant) -> bool:
 	return (value is float or value is int) and is_finite(float(value)) and value >= 0
 
 func valid_save(data: Variant) -> bool:
-	if not data is Dictionary or data.get("version") != 4: return false
+	if not data is Dictionary or data.get("version") != 5: return false
 	for key in ["funds", "prestige", "lifetime_impact", "published", "day", "hour", "next_staff_id", "next_experiment_id", "next_idea_id", "total_grants", "rescue_count", "study_points", "next_desk_id", "next_flavor_hour", "discoveries_without_legendary"]:
 		if not numeric(data.get(key)): return false
+	if not valid_funding_save(data): return false
 	if data.hour >= 24 or data.day < 1 or data.prestige > data.lifetime_impact: return false
 	if not data.get("rng_state") is String or not data.rng_state.is_valid_int(): return false
 	if not data.get("rng_seed") is String or not data.rng_seed.is_valid_int(): return false
@@ -947,7 +996,7 @@ func valid_save(data: Variant) -> bool:
 	for result in data.history + ([data.pending_result] if not data.pending_result.is_empty() else []):
 		if not result is Dictionary or not result.get("title") is String or not result.get("feedback") is String or not result.get("accepted") is bool or not FIELDS.has(result.get("field", "")) or not JOURNALS.has(result.get("kind", "")): return false
 		if result.get("secondary", "") != "" and not FIELDS.has(result.get("secondary")): return false
-		for key in ["day", "chance", "impact", "grant"]:
+		for key in ["day", "chance", "impact"]:
 			if not numeric(result.get(key)): return false
 	for entry in data.log_entries:
 		if not entry is Dictionary or not entry.get("message") is String or not numeric(entry.get("day")): return false
@@ -960,7 +1009,8 @@ func valid_person(person: Variant) -> bool:
 		if not numeric(person.get(key)): return false
 	if person.rest + person.acquire + person.analyze > 24 or person.energy > 100 or person.x > 18 or person.y > 12: return false
 	if person.get("focus") != "any" and not FIELDS.has(person.get("focus", "")): return false
-	if person.get("duty") not in ["auto", "write", "study", "maintain"]: return false
+	if person.get("duty") not in ["auto", "write", "study", "maintain", "proposal"]: return false
+	if person.duty == "proposal" and person.role != "researcher": return false
 	if not person.get("experiment") is float and not person.get("experiment") is int: return false
 	if not person.get("desk") is float and not person.get("desk") is int: return false
 	for key in ["status", "task"]:
@@ -1007,7 +1057,7 @@ func writing_availability() -> Dictionary:
 func paper_block_reason(id: int, commitment: float = 1.0) -> String:
 	var idea = idea_by_id(id)
 	if idea.is_empty(): return "This idea is no longer available."
-	if not pending_result.is_empty(): return "Read the referee decision first."
+	if feedback_blocked(): return "Resolve pending feedback or insolvency first."
 	if not active_paper.is_empty(): return "A manuscript is already active."
 	if lifetime_impact < JOURNALS[idea.kind].prestige: return "Requires %d lifetime impact." % JOURNALS[idea.kind].prestige
 	var writing = writing_availability()
@@ -1031,13 +1081,13 @@ func maybe_flavor_event(force: bool = false) -> void:
 
 func record_resources() -> void:
 	var previous = resource_history.back().grants if not resource_history.is_empty() else 0.0
-	resource_history.append({"day": day, "funds": funds, "raw": raw_by_field.duplicate(), "analyzed": analyzed_by_field.duplicate(), "grants": total_grants, "grant_income": total_grants - previous})
+	resource_history.append({"day": day, "funds": funds, "raw": raw_by_field.duplicate(), "analyzed": analyzed_by_field.duplicate(), "grants": total_grants, "grant_income": total_grants - previous, "university": income(), "costs": expenses(), "runway": runway(), "proposal_hours": total_proposal_hours, "published": published, "program_level": program_level})
 	if resource_history.size() > 720: resource_history.pop_front()
 
 var save_prefix = "user://"
 
 func slot_path(slot: int) -> String:
-	return save_prefix + "fieldwork_slot_%d_v4.json" % slot
+	return save_prefix + "fieldwork_slot_%d_v5.json" % slot
 
 func save_slot(slot: int, title: String) -> bool:
 	if slot < 1 or slot > 5: return false
@@ -1101,7 +1151,6 @@ func remove_bed(id: int) -> bool:
 	var bed = bed_by_id(id)
 	if bed.is_empty(): return false
 	beds.erase(bed)
-	funds += 157
 	for person in staff:
 		if person.get("bed", -1) == id: person.bed = -1
 	rebuild_navigation()
@@ -1156,7 +1205,6 @@ func remove_module(id: int, key: String) -> bool:
 	var experiment = experiment_by_id(id)
 	if experiment.is_empty() or key not in experiment.get("modules", []): return false
 	experiment.modules.erase(key)
-	funds += Catalog.MODULES[key].cost * 0.35
 	updated.emit()
 	return true
 
@@ -1202,4 +1250,198 @@ func develop_discovery() -> bool:
 	idea_discovered.emit(idea)
 	ideas_changed.emit()
 	updated.emit()
+	return true
+
+# Funding uses its own RNG so proposal decisions do not alter paper or idea draws.
+func feedback_blocked() -> bool:
+	return bankrupt or not pending_result.is_empty() or not pending_milestone.is_empty() or not grant_results.is_empty()
+
+func publication_activity() -> float:
+	return lerpf(1.0, 0.25, clampf((day - last_publication_day - 30.0) / 30.0, 0.0, 1.0))
+
+func runway(cost: float = 0.0, extra_daily_cost: float = 0.0) -> float:
+	var burn = expenses() + extra_daily_cost - income()
+	return maxf(0, funds - cost) / burn if burn > 0 else -1.0
+
+func proposal_for(kind: String) -> Dictionary:
+	for proposal in proposals:
+		if proposal.kind == kind: return proposal
+	return {}
+
+func writing_proposal() -> Dictionary:
+	for proposal in proposals:
+		if proposal.stage == "writing": return proposal
+	return {}
+
+func grant_period(kind: String) -> int:
+	return Funding.SPECS[kind].period
+
+func next_grant_day(kind: String) -> int:
+	if kind == "intro": return 1
+	return int(grant_next_days[kind])
+
+func grant_access_reason(kind: String) -> String:
+	if not Funding.SPECS.has(kind): return "Unknown grant"
+	if bankrupt: return "Laboratory insolvent"
+	if kind == "intro":
+		if intro_grant_completed: return "Introductory grant already awarded"
+		if first_submission_day == 0: return "Submit your first paper to qualify; acceptance is not required"
+	elif kind == "small" and not intro_grant_completed: return "Complete the introductory grant first"
+	if program_level < Funding.SPECS[kind].milestone: return "Requires program milestone %d" % Funding.SPECS[kind].milestone
+	return ""
+
+func grant_start_reason(kind: String) -> String:
+	var reason = grant_access_reason(kind)
+	if reason != "": return reason
+	if feedback_blocked(): return "Read pending feedback first"
+	for proposal in proposals:
+		if proposal.stage in ["writing", "ready"]: return "Finish or shelve the current draft first"
+		if proposal.kind == kind and proposal.stage == "review": return "This size is already under review"
+	if role_count("researcher") == 0: return "Recruit a researcher to write proposals"
+	return ""
+
+func start_proposal(kind: String, extra: float = 0.0) -> bool:
+	if grant_start_reason(kind) != "" or not is_finite(extra) or extra < 0 or extra > 0.5: return false
+	if kind == "intro": extra = 0.0
+	var old = proposal_for(kind)
+	var work = Funding.SPECS[kind].hours * (1.0 + extra)
+	var credit = minf(old.get("credit", 0.0), work * 0.5)
+	var revision = not old.is_empty() and old.stage == "rejected"
+	if not old.is_empty(): proposals.erase(old)
+	proposals.append({"kind": kind, "stage": "writing", "work": work, "progress": credit, "extra": extra, "credit": 0.0, "revision": revision, "chance": 0.0, "review_roll": 0.0, "review_left": 0, "submitted": 0, "started": day})
+	announce("Draft opened: " + Funding.SPECS[kind].name + ". Assign a researcher's Activity to Proposal.")
+	grants_changed.emit()
+	updated.emit()
+	return true
+
+func shelve_proposal(kind: String) -> bool:
+	var proposal = proposal_for(kind)
+	if proposal.is_empty() or proposal.stage not in ["writing", "ready"]: return false
+	proposals.erase(proposal)
+	announce("Proposal shelved. Draft work and revision credit discarded.")
+	grants_changed.emit()
+	updated.emit()
+	return true
+
+func grant_estimate(kind: String, extra: float = 0.0, revision: bool = false) -> Dictionary:
+	return Funding.estimate(kind, lifetime_impact, program_level, extra, revision)
+
+func grant_submit_reason(kind: String) -> String:
+	var reason = grant_access_reason(kind)
+	if reason != "": return reason
+	if feedback_blocked(): return "Read pending feedback first"
+	var proposal = proposal_for(kind)
+	if proposal.is_empty() or proposal.stage != "ready": return "Complete the proposal hours first"
+	if day < next_grant_day(kind): return "Next eligible call opens on day %d" % next_grant_day(kind)
+	return ""
+
+func submit_proposal(kind: String) -> bool:
+	if grant_submit_reason(kind) != "": return false
+	var proposal = proposal_for(kind)
+	proposal.chance = grant_estimate(kind, proposal.extra, proposal.revision).chance
+	proposal.review_roll = grant_rng.randf()
+	proposal.review_duration = Funding.SPECS[kind].review
+	proposal.review_left = proposal.review_duration
+	proposal.submitted = day
+	proposal.stage = "review"
+	if kind != "intro":
+		var period = grant_period(kind)
+		grant_next_days[kind] = 1 + (int(floorf((day - 1.0) / period)) + 1) * period
+	announce("%s submitted. %.0f%% estimate; decision in %d days." % [Funding.SPECS[kind].name, proposal.chance * 100, Funding.SPECS[kind].review / 24])
+	grants_changed.emit()
+	updated.emit()
+	return true
+
+func advance_grant_reviews() -> void:
+	var resolved = false
+	for proposal in proposals.duplicate():
+		if proposal.stage != "review": continue
+		proposal.review_left -= 1
+		if proposal.review_left > 0: continue
+		var accepted = proposal.kind == "intro" or proposal.review_roll < proposal.chance
+		var amount = Funding.SPECS[proposal.kind].amount if accepted else 0.0
+		var result = {"kind": proposal.kind, "day": day, "accepted": accepted, "amount": amount, "chance": proposal.chance, "hours": proposal.work, "revision": proposal.revision}
+		grant_history.push_front(result.duplicate(true))
+		grant_results.append(result.duplicate(true))
+		if accepted:
+			funds += amount
+			total_grants += amount
+			if proposal.kind == "intro": intro_grant_completed = true
+			proposals.erase(proposal)
+		else:
+			proposal.stage = "rejected"
+			proposal.credit = proposal.work * 0.5
+			proposal.progress = 0.0
+		paused = true
+		accumulated_time = 0.0
+		resolved = true
+		announce("%s: %s." % [Funding.SPECS[proposal.kind].name, "$%.0f awarded" % amount if accepted else "declined; 50% of work retained for revision"])
+	if resolved:
+		grants_changed.emit()
+		funding_resolved.emit()
+
+func acknowledge_grant() -> void:
+	if not grant_results.is_empty(): grant_results.pop_front()
+	paused = true
+	updated.emit()
+
+func tutorial_step() -> Dictionary:
+	if bankrupt: return {"page": "Grants", "text": "The laboratory is insolvent. Review your costs, then load a save or start again."}
+	if intro_grant_completed: return {"page": "Grants", "text": "Introduction complete. Plan the next call and keep publishing. Spending impact unlocks technology; it does not reduce university support."}
+	var intro = proposal_for("intro")
+	if not intro.is_empty():
+		if intro.stage == "review": return {"page": "Grants", "text": "Grant under review. Return the researcher to Auto to write or study while you wait."}
+		if intro.stage == "ready": return {"page": "Grants", "text": "Your proposal is ready. Check the guaranteed award and submit it in Grants."}
+		return {"page": "Grants", "text": "Assign a researcher to Proposal. Their Activity hours now prepare the grant instead of writing or studying."}
+	if first_submission_day > 0: return {"page": "Grants", "text": "First paper submitted. Open the introductory grant, then assign a researcher to Proposal. Paper acceptance is not required."}
+	if not active_paper.is_empty(): return {"page": "People", "text": "The manuscript needs writing. Keep the researcher on Auto or Write with Activity hours and a reachable desk; submission follows automatically."}
+	if analyzed_by_field.optics >= 18: return {"page": "Papers", "text": "You have 18 optics evidence. Open Papers and start the common optics letter. Papers earn impact; grants pay the bills."}
+	if raw_data + analyzed_data > 0: return {"page": "People", "text": "Data must be analyzed at a desk. Your PhDs already collect and analyze each day. Wait for 18 optics evidence; keep their beds assigned."}
+	return {"page": "People", "text": "Press Resume or Space. The two PhDs collect and analyze; the researcher studies. One day takes 48 seconds at 1x. Pause whenever you need to plan."}
+
+func valid_funding_save(data: Dictionary) -> bool:
+	for key in ["bankrupt", "intro_grant_completed", "tutorial_enabled"]:
+		if not data.get(key) is bool: return false
+	for key in ["first_submission_day", "last_publication_day", "total_proposal_hours"]:
+		if not numeric(data.get(key)): return false
+	if data.first_submission_day > data.day or data.last_publication_day > data.day: return false
+	for key in ["grant_rng_state", "grant_rng_seed"]:
+		if not data.get(key) is String or not data[key].is_valid_int(): return false
+	if not data.get("grant_next_days") is Dictionary: return false
+	for kind in ["small", "standard", "large"]:
+		if not numeric(data.grant_next_days.get(kind)) or data.grant_next_days[kind] < 1: return false
+	for key in ["proposals", "grant_history", "grant_results"]:
+		if not data.get(key) is Array: return false
+	if data.proposals.size() > 4: return false
+	var kinds = []
+	var drafts = 0
+	for proposal in data.proposals:
+		if not proposal is Dictionary or not Funding.SPECS.has(proposal.get("kind", "")): return false
+		if proposal.kind in kinds: return false
+		kinds.append(proposal.kind)
+		if proposal.get("stage") not in ["writing", "ready", "review", "rejected"] or not proposal.get("revision") is bool: return false
+		for key in ["work", "progress", "extra", "credit", "chance", "review_roll", "review_left", "submitted", "started"]:
+			if not numeric(proposal.get(key)): return false
+		var spec = Funding.SPECS[proposal.kind]
+		var valid_hours = is_equal_approx(proposal.work, spec.hours * (1 + proposal.extra))
+		if proposal.kind == "small": valid_hours = valid_hours or is_equal_approx(proposal.work, 96.0 * (1 + proposal.extra))
+		if proposal.extra > 0.5 or not valid_hours: return false
+		var duration = proposal.get("review_duration", 120 if proposal.kind == "intro" and proposal.review_left > 24 else spec.review)
+		if not numeric(duration): return false
+		if not is_equal_approx(duration, spec.review) and not (proposal.kind == "intro" and is_equal_approx(duration, 120)): return false
+		if proposal.progress > proposal.work or proposal.credit > proposal.work * 0.5 or proposal.chance > 1 or proposal.review_roll > 1 or proposal.review_left > duration: return false
+		if proposal.kind == "intro" and (data.intro_grant_completed or proposal.extra != 0 or proposal.stage == "rejected"): return false
+		if proposal.stage in ["writing", "ready"]: drafts += 1
+		if proposal.stage == "ready" and not is_equal_approx(proposal.progress, proposal.work): return false
+		if proposal.stage == "review" and (proposal.review_left <= 0 or not is_equal_approx(proposal.progress, proposal.work) or proposal.submitted < 1): return false
+	if drafts > 1: return false
+	for result in data.grant_history + data.grant_results:
+		if not result is Dictionary or result.get("kind") not in ["startup", "intro", "small", "standard", "large"]: return false
+		if not result.get("accepted") is bool or not result.get("revision") is bool: return false
+		for key in ["amount", "chance", "hours", "day"]:
+			if not numeric(result.get(key)): return false
+		if result.chance > 1 or result.day > data.day: return false
+		# Historical awards keep their original amounts across balance revisions.
+		var awards = [24000.0, 30000.0] if result.kind == "startup" else [12000.0, 14000.0] if result.kind == "small" else [Funding.SPECS[result.kind].amount]
+		if result.accepted and result.amount not in awards or not result.accepted and result.amount != 0.0: return false
 	return true

@@ -32,7 +32,7 @@ func run() -> void:
 	sim = Simulation.new()
 	root.add_child(sim)
 	reset()
-	check(sim.valid_save(sim.snapshot()), "Fresh v4 state validates")
+	check(sim.valid_save(sim.snapshot()), "Fresh v5 state validates")
 	var older = sim.snapshot()
 	older.version = 3
 	check(not sim.valid_save(older), "Prior save version rejected for fresh iteration")

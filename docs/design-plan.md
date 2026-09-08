@@ -1,5 +1,7 @@
 # Iteration 4 design and playtest notes
 
+Historical record. For the current funding economy, implementation sequence and playtest gates, see [progression-design.md](progression-design.md).
+
 ## Scope
 
 This iteration adds long-term research programs, a development tree, equipment modules and desk upgrades, individually assigned beds, more varied staff appearances, a literal notebook, and clearer time controls. It retains the 48-second day, base publication rules, and evidence commitments.

@@ -2,26 +2,26 @@ class_name LabCatalog
 extends RefCounted
 
 const FIELDS = {
-	"nuclear": {"name": "Nuclear", "color": "c8ab79"},
-	"quantum": {"name": "Quantum", "color": "b0a5c8"},
-	"materials": {"name": "Materials", "color": "94acbc"},
-	"optics": {"name": "Optics", "color": "91b8ad"}
+	"nuclear": {"name": "Nuclear", "color": "f2c16e"},
+	"quantum": {"name": "Quantum", "color": "bf9af2"},
+	"materials": {"name": "Materials", "color": "82cff5"},
+	"optics": {"name": "Optics", "color": "70e4cb"}
 }
 const EQUIPMENT = {
-	"optics": {"name": "Optical bench", "short": "OPT", "cost": 2400.0, "capacity": 18.0, "upkeep": 12.0, "prestige": 0, "unlock": "", "field": "optics", "secondary": "quantum", "color": "91b8ad", "description": "Interference measurements. Upgraded benches can also collect quantum data."},
-	"vacuum": {"name": "Materials chamber", "short": "MAT", "cost": 4800.0, "capacity": 24.0, "upkeep": 20.0, "prestige": 0, "unlock": "", "field": "materials", "secondary": "optics", "color": "94acbc", "description": "Thin films and surface measurements. Adds optics data after mixed-mode upgrades."},
-	"detector": {"name": "Particle detector", "short": "NUC", "cost": 8200.0, "capacity": 33.0, "upkeep": 30.0, "prestige": 0, "unlock": "nuclear_lab", "field": "nuclear", "secondary": "materials", "color": "c8ab79", "description": "Rare-event detection. Spend impact in Development to unlock construction."},
-	"quantum": {"name": "Quantum rig", "short": "QNT", "cost": 14500.0, "capacity": 45.0, "upkeep": 44.0, "prestige": 0, "unlock": "quantum_lab", "field": "quantum", "secondary": "nuclear", "color": "b0a5c8", "description": "Coherence measurements. Upgraded rigs can also probe nuclear spin."}
+	"optics": {"name": "Optical bench", "short": "OPT", "cost": 2400.0, "capacity": 18.0, "upkeep": 60.0, "prestige": 0, "unlock": "", "field": "optics", "secondary": "quantum", "color": "70e4cb", "description": "Interference measurements. Upgraded benches can also collect quantum data."},
+	"vacuum": {"name": "Materials chamber", "short": "MAT", "cost": 4800.0, "capacity": 24.0, "upkeep": 100.0, "prestige": 0, "unlock": "", "field": "materials", "secondary": "optics", "color": "82cff5", "description": "Thin films and surface measurements. Adds optics data after mixed-mode upgrades."},
+	"detector": {"name": "Particle detector", "short": "NUC", "cost": 8200.0, "capacity": 33.0, "upkeep": 150.0, "prestige": 0, "unlock": "nuclear_lab", "field": "nuclear", "secondary": "materials", "color": "f2c16e", "description": "Rare-event detection. Spend impact in Development to unlock construction."},
+	"quantum": {"name": "Quantum rig", "short": "QNT", "cost": 14500.0, "capacity": 45.0, "upkeep": 220.0, "prestige": 0, "unlock": "quantum_lab", "field": "quantum", "secondary": "nuclear", "color": "bf9af2", "description": "Coherence measurements. Upgraded rigs can also probe nuclear spin."}
 }
 const ROLES = {
-	"phd": {"name": "PhD student", "cost": 900.0, "salary": 18.0, "description": "Collects and analyzes data; can also write or study."},
-	"researcher": {"name": "Researcher", "cost": 1800.0, "salary": 32.0, "description": "Writes papers and studies new ideas; can collect or analyze too."},
-	"technician": {"name": "Technician", "cost": 1200.0, "salary": 22.0, "description": "Services individual experiments; can help with data work."}
+	"phd": {"name": "PhD student", "cost": 900.0, "salary": 100.0, "description": "Collects and analyzes data; can also write or study."},
+	"researcher": {"name": "Researcher", "cost": 1800.0, "salary": 200.0, "description": "Writes papers and grant proposals; studies new ideas and can collect or analyze too."},
+	"technician": {"name": "Technician", "cost": 1200.0, "salary": 140.0, "description": "Services individual experiments; can help with data work."}
 }
 const JOURNALS = {
-	"letter": {"name": "Research letter", "tag": "FOCUSED RESULT", "data": 18.0, "work": 10.0, "grant": 2600.0, "impact": 2, "prestige": 0, "chance": 0.62, "review": 24},
-	"article": {"name": "Full article", "tag": "SUBSTANTIAL STUDY", "data": 48.0, "work": 26.0, "grant": 8200.0, "impact": 5, "prestige": 2, "chance": 0.48, "review": 48},
-	"breakthrough": {"name": "High-impact paper", "tag": "FLAGSHIP PAPER", "data": 110.0, "work": 55.0, "grant": 22000.0, "impact": 12, "prestige": 7, "chance": 0.35, "review": 72}
+	"letter": {"name": "Research letter", "tag": "FOCUSED RESULT", "data": 18.0, "work": 10.0, "impact": 2, "prestige": 0, "chance": 0.62, "review": 24},
+	"article": {"name": "Full article", "tag": "SUBSTANTIAL STUDY", "data": 48.0, "work": 26.0, "impact": 5, "prestige": 2, "chance": 0.48, "review": 48},
+	"breakthrough": {"name": "High-impact paper", "tag": "FLAGSHIP PAPER", "data": 110.0, "work": 55.0, "impact": 12, "prestige": 7, "chance": 0.35, "review": 72}
 }
 const UPGRADES = {
 	"precision": {"name": "Precision instrumentation", "cost": 2, "requires": "", "branch": "instrumentation", "description": "Unlock level 2 experiments: +50% base capacity. Purchase each upgrade with funds."},
