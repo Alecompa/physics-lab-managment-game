@@ -9,8 +9,8 @@ func _draw() -> void:
 	var look = StaffAppearance.of(person)
 	var s = size.x / 64.0
 	var c = size * Vector2(0.5, 0.4)
-	draw_style_box(LabUI.box(Color("18313e"), LabUI.LINE, 0, 7), Rect2(Vector2.ZERO, size))
-	draw_arc(c + Vector2(0, 6) * s, 26 * s, 0, TAU, 40, Color(LabUI.ACCENT, 0.18), 1, true)
+	draw_style_box(LabUI.box(Color("426871"), LabUI.LINE, 0, 7), Rect2(Vector2.ZERO, size))
+	draw_arc(c + Vector2(0, 6) * s, 26 * s, 0, TAU, 40, Color(LabUI.GOLD, 0.3), 2, true)
 	for y in range(6, int(size.y), 8): draw_line(Vector2(4, y), Vector2(size.x - 4, y), Color(0.3, 0.6, 0.7, 0.035), 1)
 	var width = 27 if look.wide else 23
 	draw_circle(c + Vector2(0, 34) * s, width * s, look.shirt)

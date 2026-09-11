@@ -53,7 +53,7 @@ func run() -> void:
 	check(is_equal_approx(person.energy, 22.8) and person.status.contains("40%"), "Bedless resting restores only 40% and explains it")
 	check(sim.place_bed(Vector2i(14, 9)), "Another bed can be physically placed")
 	check(person.bed == 4, "New bed goes to a person without one")
-	check(not sim.place_bed(Vector2i(15, 10)), "Invalid sleeping-area placement rejected")
+	check(not sim.place_bed(Vector2i(15, 11)), "Bed cannot cover a reserved rest seat")
 	sim.remove_bed(4)
 	check(person.bed == -1, "Removing a bed clears its owner")
 	reset()
@@ -95,8 +95,8 @@ func run() -> void:
 		check(sim.choose_program(program) and not sim.choose_program("logical_qubit"), "One permanent program per run")
 		var spec = sim.Programs.PROGRAMS[program]
 		check(not sim.develop_discovery(), "Final discovery locked before milestones")
-		finish_paper("optics", "letter")
-		finish_paper("optics", "letter")
+		finish_paper(spec.field, "letter")
+		finish_paper(spec.field, "letter")
 		check(sim.program_level == 1 and not sim.pending_milestone.is_empty(), "Foundations reached with starter papers")
 		var hour = sim.hour
 		sim.acknowledge_result(); sim.paused = false; sim._process(10); sim.advance_hour()

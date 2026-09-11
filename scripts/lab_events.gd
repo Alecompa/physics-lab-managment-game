@@ -3,6 +3,7 @@ extends RefCounted
 ## Flavor uses its own RNG and cannot change resources or publication draws.
 
 const LINES = {
+	"supervise": ["{name} asks which control would make the result unconvincing. The student adds it to tomorrow's run.", "{name} and a PhD reconstruct yesterday's calibration from the lab notebook.", "A short discussion with {name} saves an afternoon of fitting the wrong model."],
 	"acquire": ["{name} labels a cable 'do not unplug'. It was already unplugged.", "{name} asks the {bench} to behave. For once, it seems to listen.", "A very small measurement gets a very large sigh from {name}.", "{name} straightens the cables, then photographs them as evidence.", "{name} has named the {bench} 'Please'.", "The {bench} hums in B-flat. {name} insists that is useful information."],
 	"analyze": ["{name} finds a beautiful trend. It was the row numbers.", "{name} gives a suspicious outlier a second chance.", "A spreadsheet called 'final_final_really' appears on {name}'s desk.", "{name} celebrates a clean fit with a very restrained fist pump.", "{name} discovers yesterday's mystery was a unit conversion.", "The error bars are getting smaller. {name}'s coffee is getting colder."],
 	"write": ["{name} deletes 'clearly' from the manuscript. The sentence improves.", "{name} spends ten minutes negotiating with a figure caption.", "The paper now contains one fewer 'however', thanks to {name}.", "{name} calls a result 'interesting'. Everyone knows what that means.", "{name} finally gets all the references to use the same font."],
@@ -25,9 +26,14 @@ static func choose(sim: Node, random: RandomNumberGenerator, recent: Array) -> D
 		if person.get("working", false) and field == person.specialty and person.task in ["acquire", "analyze"]:
 			append_lines(options, SPECIALIST, "specialist", person, bench, sim.FIELDS[field].name.to_lower())
 		if person.get("working", false) and LINES.has(person.task): append_lines(options, LINES[person.task], person.task, person, bench, field)
+	if sim.research_program != "":
+		var spec = sim.Programs.PROGRAMS[sim.research_program]
+		options.append({"key": "program_" + sim.research_program + str(sim.program_level), "message": spec.flavour[mini(sim.program_level, 3)], "category": "program"})
 	var fresh: Array = []
 	for option in options:
 		if option.key not in recent: fresh.append(option)
+	if fresh.is_empty():
+		fresh = options.filter(func(option): return recent.is_empty() or option.key != recent.back())
 	if fresh.is_empty(): return {}
 	return fresh[random.randi_range(0, fresh.size() - 1)]
 

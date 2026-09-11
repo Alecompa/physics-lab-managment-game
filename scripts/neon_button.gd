@@ -7,6 +7,8 @@ var hover_tween: Tween
 var press_tween: Tween
 
 func _ready() -> void:
+	var tree = get_tree()
+	pressed.connect(func(): tree.call_group("lab_audio", "play_effect", "click"))
 	mouse_entered.connect(func(): _hover(1.0))
 	mouse_exited.connect(func(): _hover(0.0))
 	button_down.connect(func(): _press(1.0))

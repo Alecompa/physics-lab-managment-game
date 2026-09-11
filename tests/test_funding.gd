@@ -224,7 +224,7 @@ func playtest(seed_value: int, aggressive: bool, force_rejections: bool) -> Dict
 			var commitment = 1.0 if sim.first_submission_day == 0 else 1.5
 			var started = false
 			for idea in sim.ideas:
-				if idea.field == "optics" and sim.can_start_paper(idea.id, commitment):
+				if idea.field == sim.Programs.PROGRAMS[sim.research_program].field and sim.can_start_paper(idea.id, commitment):
 					sim.start_paper(idea.id, commitment); started = true; break
 			if not started and sim.study_points >= 8:
 				if sim.ideas.size() >= 6: sim.discard_idea(sim.ideas.back().id)

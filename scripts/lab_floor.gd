@@ -5,6 +5,11 @@ signal placement_cancelled
 signal person_clicked(id: int)
 var simulation: LabSimulation
 var build_kind = ""
+var moving_id = -1
+var zoom = 1.0
+var pan = Vector2.ZERO
+var dragging_map = false
+var placement_reason = ""
 var selected_id = -1
 var selected_kind = ""
 var selected_person = -1
@@ -19,17 +24,20 @@ var font: Font
 const Layout = preload("res://scripts/lab_layout.gd")
 
 func _ready() -> void:
+	clip_contents = true
+	focus_mode = Control.FOCUS_ALL
 	custom_minimum_size = Vector2(620, 360)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	font = ThemeDB.fallback_font
-	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	mouse_default_cursor_shape = Control.CURSOR_ARROW
 	mouse_exited.connect(func(): hovered = Vector2i(-1, -1); queue_redraw())
 
 func reset_positions() -> void:
 	person_positions.clear()
 	trails.clear()
 	last_stamp = -1
+	reset_camera()
 
 func _process(delta: float) -> void:
 	if simulation == null: return
@@ -64,19 +72,83 @@ func person_screen_position(person: Dictionary) -> Vector2:
 func cell_at(point: Vector2) -> Vector2i:
 	return Vector2i(((point - floor_origin) / tile).floor())
 
+func reset_camera() -> void:
+	zoom = 1.0
+	pan = Vector2.ZERO
+	queue_redraw()
+
+func update_camera() -> void:
+	var dimensions = Vector2(Layout.dimensions(simulation.expansion_level))
+	tile = minf((size.x - 22) / dimensions.x, (size.y - 35) / dimensions.y) * zoom
+	var map_size = dimensions * tile
+	pan = pan.clamp(-map_size * 0.5, map_size * 0.5)
+	floor_origin = (size - map_size) * 0.5 + pan
+
+func zoom_at(factor: float, anchor: Vector2) -> void:
+	if simulation == null: return
+	update_camera()
+	var world = (anchor - floor_origin) / tile
+	zoom = clampf(zoom * factor, 0.7, 3.5)
+	update_camera()
+	pan += anchor - (floor_origin + world * tile)
+	update_camera()
+	queue_redraw()
+
 func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_MIDDLE:
+		dragging_map = event.pressed
+		mouse_default_cursor_shape = Control.CURSOR_DRAG if dragging_map else Control.CURSOR_ARROW
+		grab_focus()
+		accept_event()
+		return
+	if event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		zoom_at(1.15 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / 1.15, event.position)
+		accept_event()
+		return
+	if event is InputEventPanGesture:
+		pan -= event.delta * 24.0
+		update_camera()
+		queue_redraw()
+		accept_event()
+		return
+	if event is InputEventMagnifyGesture:
+		zoom_at(event.factor, event.position)
+		accept_event()
+		return
+	if event is InputEventKey and event.pressed:
+		var direction = {KEY_LEFT: Vector2.RIGHT, KEY_RIGHT: Vector2.LEFT, KEY_UP: Vector2.DOWN, KEY_DOWN: Vector2.UP}.get(event.keycode, Vector2.ZERO)
+		if direction != Vector2.ZERO:
+			pan += direction * 40
+			update_camera()
+			queue_redraw()
+			accept_event()
+			return
 	if event is InputEventMouseMotion:
+		if dragging_map:
+			pan += event.relative
+			update_camera()
+			queue_redraw()
+			accept_event()
+			return
 		hovered = cell_at(event.position)
+		mouse_default_cursor_shape = Control.CURSOR_CROSS if build_kind != "" else Control.CURSOR_ARROW
 		tooltip_text = ""
-		if build_kind != "": tooltip_text = simulation.placement_error(build_kind, hovered)
+		if build_kind != "":
+			placement_reason = simulation.relocation_error(build_kind, moving_id, hovered) if moving_id >= 0 else simulation.placement_error(build_kind, hovered)
+			tooltip_text = placement_reason
 		else:
 			var object = simulation.object_at(hovered)
-			if not object.is_empty(): tooltip_text = "%s #%d" % [object.kind.capitalize(), object.id] if object.kind in ["bed", "desk"] else "%s / L%d / %.0f%% condition" % [simulation.EQUIPMENT[object.kind].name, object.level, object.condition]
+			if not object.is_empty():
+				mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+				tooltip_text = "%s #%d" % [object.kind.capitalize(), object.id] if object.kind in ["bed", "desk"] else "%s / L%d / %.0f%% condition" % [simulation.EQUIPMENT[object.kind].name, object.level, object.condition]
 			for person in simulation.staff:
-				if person_screen_position(person).distance_to(event.position) < 15: tooltip_text = "%s\n%s\nEnergy %.0f%%" % [person.name, person.status, person.energy]
+				if person_screen_position(person).distance_to(event.position) < 15:
+					mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+					tooltip_text = "%s\n%s\nEnergy %.0f%%" % [person.name, person.status, person.energy]
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_RIGHT: placement_cancelled.emit()
 		if event.button_index == MOUSE_BUTTON_LEFT:
+			grab_focus()
 			if build_kind == "":
 				for person in simulation.staff:
 					if person_screen_position(person).distance_to(event.position) < 14:
@@ -84,95 +156,63 @@ func _gui_input(event: InputEvent) -> void:
 						person_clicked.emit(person.id)
 						return
 			var cell = cell_at(event.position)
-			if Layout.inside(cell): cell_clicked.emit(cell)
+			if Layout.inside(cell, simulation.expansion_level): cell_clicked.emit(cell)
 
 func text_at(point: Vector2, text: String, color: Color, text_size: int = 12) -> void:
 	draw_string(font, point, text, HORIZONTAL_ALIGNMENT_LEFT, -1, text_size, color)
 
 func _draw() -> void:
 	if simulation == null or font == null: return
-	tile = minf((size.x - 22) / 20.0, (size.y - 35) / 14.0)
-	floor_origin = (size - Vector2(20, 14) * tile) * 0.5
-	var map_rect = Rect2(floor_origin, Vector2(20, 14) * tile)
-	draw_style_box(LabUI.box(Color("0f1215"), Color("0f1215"), 0, 10), Rect2(map_rect.position + Vector2(0, 8), map_rect.size))
-	for x in range(20):
-		for y in range(14):
+	update_camera()
+	var dimensions = Layout.dimensions(simulation.expansion_level)
+	var map_rect = Rect2(floor_origin, Vector2(dimensions) * tile)
+	draw_style_box(LabUI.box(Color("0f1215"), Color("304959"), 1, 6), map_rect.grow(3))
+	for x in range(dimensions.x):
+		for y in range(dimensions.y):
 			var cell = Vector2i(x, y)
 			var position = floor_origin + Vector2(cell) * tile
-			var room = Layout.room(cell)
-			var color = Color("b4c0c2") if room in ["optics", "measurements"] else Color("bdbaae") if room == "office" else Color("aebbb8") if room == "common" else Color("8fa8b3")
-			if room != "wall":
-				var sunlight = maxf(0, 1.0 - minf(y, 13 - y) / 5.0)
-				color = color.lerp(Color("e0dfcb"), sunlight * 0.18)
-			if room == "wall": color = Color("263d4c")
-			elif (x + y) % 2 == 1: color = color.darkened(0.024)
+			var room = Layout.room(cell, simulation.expansion_level, simulation.layout_style)
+			var color = Color("c8ddd7") if room in ["optics", "measurements"] else Color("e4cba3") if room == "office" else Color("e2dfc8")
+			if room == "corridor": color = Color("81aaa8")
+			if room == "wall": color = Color("f0e3c3")
+			elif (x + y) % 2: color = color.darkened(0.025)
 			draw_rect(Rect2(position, Vector2.ONE * tile), color)
-			if room != "wall": draw_rect(Rect2(position + Vector2.ONE, Vector2.ONE * (tile - 1)), Color(0.15, 0.25, 0.3, 0.10), false)
-			else:
-				draw_rect(Rect2(position, Vector2.ONE * tile), Color("304959"))
-				if y == 0 or Layout.room(cell + Vector2i.UP) != "wall":
-					draw_line(position + Vector2(0, 2), position + Vector2(tile, 2), Color("66818e"), 2)
-				if x == 0 or Layout.room(cell + Vector2i.LEFT) != "wall":
-					draw_line(position + Vector2(2, 0), position + Vector2(2, tile), Color("536f7e"), 2)
-				if x == 19 or Layout.room(cell + Vector2i.RIGHT) != "wall":
-					draw_line(position + Vector2(tile - 2, 0), position + Vector2(tile - 2, tile), Color("182f3e"), 3)
-				if y < 13 and Layout.room(cell + Vector2i.DOWN) != "wall":
-					draw_rect(Rect2(position + Vector2(0, tile - 5), Vector2(tile, 5)), Color("172a36"))
-					draw_rect(Rect2(position + Vector2(0, tile), Vector2(tile, tile * 0.15)), Color(0.03, 0.1, 0.15, 0.16))
-				if y in [0, 13] and x in [2, 3, 5, 6, 13, 14, 16, 17]:
-					draw_rect(Rect2(position + Vector2(1, tile * 0.35), Vector2(tile - 2, tile * 0.25)), Color("83d5ec"))
-	# Door frames occupy the walls, while their openings remain walkable.
-	for y in [5, 8]:
-		for x in [4, 15]:
-			var p = floor_origin + Vector2(x, y) * tile
-			draw_line(p + Vector2(1, 0), p + Vector2(1, tile), Color("0d202b"), 5)
-			draw_line(p, p + Vector2(0, tile), Color("94e9ee"), 2)
-			draw_line(p + Vector2(tile, 0), p + Vector2(tile, tile), Color("94e9ee"), 2)
-			draw_line(p + Vector2(3, tile * 0.5), p + Vector2(tile - 3, tile * 0.5), Color(0.6, 0.9, 1, 0.2), 1)
-			draw_rect(Rect2(p + Vector2(-4, 0), Vector2(8, tile)), Color(0.3, 0.9, 1, 0.07))
-	# Wall-mounted details do not occupy or imply additional blocked floor cells.
-	for item in [[Vector2(2, 1), "cabinet"], [Vector2(5, 1), "board"], [Vector2(13, 1), "board"], [Vector2(16, 1), "cabinet"]]:
-		draw_wall_detail(item[0], item[1])
-	for cell in [Vector2(8, 2), Vector2(11, 2), Vector2(8, 11), Vector2(11, 11)]:
-		var lamp = center(cell)
-		glow(lamp, tile * 0.6, Color("7de5ed"), 0.10)
-		draw_style_box(LabUI.box(Color("d5faff"), Color("72a9b8"), 0, 2), Rect2(lamp - Vector2(2, 6), Vector2(4, 12)))
-	# Coffee table and seats remain available for less effective bedless rest.
-	var coffee = center(Vector2(12, 12))
-	draw_rect(Rect2(coffee - Vector2.ONE * tile * 0.3, Vector2.ONE * tile * 0.6), Color("87765d"))
-	draw_circle(coffee, tile * 0.12, Color("e4dfd2"))
+			draw_rect(Rect2(position, Vector2.ONE * tile), Color(0.15, 0.25, 0.3, 0.07), false)
+			if room == "office":
+				draw_line(position + Vector2(0, tile * 0.5), position + Vector2(tile, tile * 0.5), Color(0.35, 0.26, 0.16, 0.12), 1)
+			if room == "wall":
+				draw_rect(Rect2(position + Vector2(0, tile * 0.65), Vector2(tile, tile * 0.35)), Color("688c90"))
+				draw_line(position, position + Vector2(tile, 0), Color("fff2d7"), 2)
+				if y == 0 and x % 4 in [1, 2]: draw_rect(Rect2(position + Vector2(1, tile * 0.3), Vector2(tile - 2, tile * 0.25)), Color("83d5ec"))
+	if simulation.layout_style == "rooms":
+		# Rugs sit below furniture and do not obstruct circulation.
+		var rug = Rect2(floor_origin + Vector2(12.65, 11.55) * tile, Vector2(5.25, 1.85) * tile)
+		draw_style_box(LabUI.box(Color("83958a"), Color("c9c6a9"), 0, 3), rug)
+		for row in range(5):
+			draw_line(rug.position + Vector2(tile * 0.12, tile * (0.2 + row * 0.32)), rug.position + Vector2(rug.size.x - tile * 0.12, tile * (0.2 + row * 0.32)), Color(0.85, 0.84, 0.72, 0.18), 1)
+		# Mounted on walls, these details never claim a walkable cell.
+		for cell in [Vector2(13, 0.65), Vector2(2, 8.65)]: draw_wall_detail(cell, "board")
+		draw_wall_detail(Vector2(17, 0.65), "monitor")
+		for cell in Layout.decorations(simulation.layout_style): draw_decoration(cell, Layout.decorations(simulation.layout_style)[cell])
+		# Hall runner and threshold strips make the doors legible at Fit zoom.
+		draw_rect(Rect2(floor_origin + Vector2(1.2, 7.2) * tile, Vector2(25.6, 0.6) * tile), Color("597b80"))
+		for cell in [Vector2(8, 6), Vector2(20, 6), Vector2(4, 8), Vector2(15, 8), Vector2(22, 8)]:
+			var p = floor_origin + cell * tile
+			draw_line(p + Vector2(0, tile * 0.5), p + Vector2(tile * 2, tile * 0.5), Color("c8b998"), 2)
 	for seat in Layout.REST_SEATS:
-		var q = center(Vector2(seat))
-		draw_circle(q + Vector2(1, 3), tile * 0.23, Color(0.03, 0.09, 0.12, 0.2))
-		draw_circle(q, tile * 0.22, Color("355568"))
-		draw_arc(q, tile * 0.20, 0, PI, 16, Color("809ba5"), 2, true)
+		draw_furniture("armchair", Rect2(center(Vector2(seat)) - Vector2.ONE * tile * 0.44, Vector2.ONE * tile * 0.88))
+	draw_furniture("table", Rect2(center(Vector2(12, 12)) - Vector2.ONE * tile * 0.46, Vector2.ONE * tile * 0.92))
 	for bed in simulation.beds: draw_bed(bed)
-	for cell in [Vector2(1, 6), Vector2(18, 7), Vector2(18, 12)]:
-		var p = center(cell)
-		draw_circle(p + Vector2(2, 4), tile * 0.26, Color(0.05, 0.15, 0.15, 0.2))
-		draw_circle(p, tile * 0.19, Color("344e58"))
-		draw_circle(p, tile * 0.15, Color("697866"))
-		for angle in range(7):
-			var direction = Vector2.from_angle(angle * TAU / 7)
-			var side = direction.orthogonal()
-			var leaf = PackedVector2Array([p, p + direction * tile * 0.17 + side * tile * 0.09, p + direction * tile * 0.34, p + direction * tile * 0.17 - side * tile * 0.09])
-			draw_colored_polygon(leaf, Color("628f76") if angle % 2 else Color("86aa82"))
-			draw_line(p, p + direction * tile * 0.29, Color("b1c69a"), 0.6, true)
-	for item in [[Vector2(1, 0), "OPTICS LAB"], [Vector2(12, 0), "MEASUREMENT LAB"], [Vector2(1, 13), "OFFICE"], [Vector2(12, 13), "SLEEPING AREA"]]:
-		var label_position = center(item[0]) + Vector2(0, 4)
-		var label_width = font.get_string_size(item[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
-		draw_rect(Rect2(label_position - Vector2(4, 12), Vector2(label_width + 8, 16)), Color("263d4c"))
-		text_at(label_position, item[1], Color("d4edf5"), 10)
 
 	for desk in simulation.desks: draw_desk(desk)
 	for experiment in simulation.experiments: draw_experiment(experiment)
-	if build_kind != "" and Layout.inside(hovered):
-		var color = LabUI.ACCENT if simulation.can_place(build_kind, hovered) else Color("c97f73")
+	if build_kind != "" and Layout.inside(hovered, simulation.expansion_level):
+		var color = LabUI.ACCENT if placement_reason == "" else Color("c97f73")
 		var rect = Rect2(floor_origin + Vector2(hovered) * tile, Vector2(Layout.footprint(build_kind)) * tile)
 		draw_rect(rect, Color(color, 0.25))
 		draw_rect(rect, color, false, 2)
 		if build_kind == "desk": draw_circle(center(Vector2(hovered + Vector2i.DOWN)), tile * 0.22, color)
-	if build_kind == "" and Layout.inside(hovered):
+	if build_kind == "" and Layout.inside(hovered, simulation.expansion_level):
 		var object = simulation.object_at(hovered)
 		if not object.is_empty(): draw_selection(Rect2(floor_origin + Vector2(object.x, object.y) * tile, Vector2(Layout.footprint(object.kind)) * tile))
 	for person in simulation.staff: draw_person(person)
@@ -197,38 +237,36 @@ func draw_wall_detail(cell: Vector2, kind: String) -> void:
 			draw_rect(Rect2(q + Vector2(2, 2), Vector2(tile * 0.22, tile * 0.15)), Color("173445"))
 			draw_circle(q + Vector2(tile * 0.35, tile * 0.17), 1.4, LabUI.ACCENT)
 
+var furniture_textures: Dictionary = {}
+
+func furniture_texture(key: String) -> Texture2D:
+	if not furniture_textures.has(key): furniture_textures[key] = load("res://assets/kenney/furniture/" + key + ".png")
+	return furniture_textures[key]
+
+func draw_furniture(key: String, rect: Rect2) -> void:
+	var texture = furniture_texture(key)
+	var dimensions = texture.get_size()
+	var scale_value = minf(rect.size.x / dimensions.x, rect.size.y / dimensions.y)
+	var extent = dimensions * scale_value
+	var origin = rect.position + (rect.size - extent) * 0.5
+	# All baked sprites fit their existing footprint; collision geometry is unchanged.
+	draw_set_transform(rect.get_center() + Vector2(0, rect.size.y * 0.32), 0, Vector2(1, 0.32))
+	draw_circle(Vector2.ZERO, rect.size.x * 0.42, Color(0.14, 0.23, 0.24, 0.18))
+	draw_set_transform(Vector2.ZERO)
+	draw_texture_rect(texture, Rect2(origin, extent), false)
+
+func draw_decoration(cell: Vector2i, kind: String) -> void:
+	draw_furniture(kind, Rect2(floor_origin + Vector2(cell) * tile + Vector2.ONE * tile * 0.03, Vector2.ONE * tile * 0.94))
+
 func draw_desk(desk: Dictionary) -> void:
 	var p = floor_origin + Vector2(desk.x, desk.y) * tile
-	var active = false
-	for person in simulation.staff:
-		if person.get("working", false) and person.task in ["study", "analyze", "write"] and Vector2(person.x, person.y).distance_to(Vector2(Layout.chair(desk))) < 0.6: active = true
-	var unit = tile / 40.0
-	draw_set_transform(p, 0, Vector2.ONE * unit)
-	draw_style_box(LabUI.box(Color(0, 0.04, 0.07, 0.3), Color(0, 0, 0, 0), 0, 4), Rect2(3, 9, 75, 32))
-	for x in [5, 66]: draw_rect(Rect2(x, 25, 7, 12), Color("344954"))
-	draw_style_box(LabUI.box(Color("899c9f"), Color("425c68"), 0, 3), Rect2(2, 3, 76, 29))
-	draw_line(Vector2(5, 5), Vector2(75, 5), Color("c6d2ce"), 1)
-	draw_rect(Rect2(22, 19, 4, 5), Color("233e4c"))
-	draw_rect(Rect2(17, 24, 14, 2), Color("3b5360"))
-	draw_style_box(LabUI.box(Color("102733"), Color("566e7b"), 0, 2), Rect2(10, 7, 29, 15))
-	draw_rect(Rect2(13, 9, 23, 10), Color("245e73") if active else Color("27414f"))
-	if active:
-		glow(Vector2(24, 15), 22, LabUI.ACCENT, 0.04)
-		for line in range(3): draw_line(Vector2(15, 11 + line * 3), Vector2(24 + sin(animation_time + line) * 7, 11 + line * 3), Color("81e8e7"), 1)
-	draw_style_box(LabUI.box(Color("c0ccc8"), Color("687e82"), 0, 1), Rect2(13, 25, 24, 4))
-	for i in range(7): draw_line(Vector2(15 + i * 3, 25), Vector2(15 + i * 3, 28), Color("7f939b"), 0.5)
-	draw_rect(Rect2(49, 10, 16, 19), Color("e2dfce"))
-	for i in range(4): draw_line(Vector2(52, 14 + i * 3), Vector2(61, 14 + i * 3), Color("9eaeb0"), 0.6)
-	draw_circle(Vector2(69, 12), 3, Color("dce9e5"))
-	draw_circle(Vector2(69, 12), 1.8, Color("695344"))
-	if desk.get("level", 1) > 1:
-		draw_rect(Rect2(41, 8, 5, 19), Color("2a424e"))
-		for i in range(desk.level - 1): draw_circle(Vector2(43.5, 11 + i * 5), 1, LabUI.ACCENT)
-	draw_set_transform(Vector2.ZERO)
+	draw_furniture("desk", Rect2(p, Vector2(tile * 2, tile * 1.12)))
 	var chair = center(Vector2(Layout.chair(desk)))
-	draw_circle(chair + Vector2(1, 3), tile * 0.22, Color(0.03, 0.09, 0.12, 0.25))
-	draw_style_box(LabUI.box(Color("304b5c"), Color("1b303e"), 0, 4), Rect2(chair - Vector2.ONE * tile * 0.21, Vector2.ONE * tile * 0.42))
-	draw_line(chair + Vector2(-tile * 0.18, tile * 0.16), chair + Vector2(tile * 0.18, tile * 0.16), Color("7896a4"), 2)
+	draw_furniture("chair", Rect2(chair - Vector2.ONE * tile * 0.4, Vector2.ONE * tile * 0.8))
+	var active = simulation.staff.any(func(person): return person.get("working", false) and person.task in ["study", "analyze", "write", "proposal", "supervise"] and Vector2(person.x, person.y).distance_to(Vector2(Layout.chair(desk))) < 0.6)
+	if active: glow(p + Vector2(tile * 0.8, tile * 0.22), tile * 0.28, LabUI.ACCENT, 0.12)
+	if desk.get("level", 1) > 1:
+		for i in range(desk.level - 1): draw_circle(p + Vector2(tile * (1.65 + i * 0.12), tile * 0.85), tile * 0.04, LabUI.GOLD)
 	if desk.id == selected_id and selected_kind == "desk": draw_selection(Rect2(p, Vector2(tile * 2, tile)))
 
 func draw_experiment(experiment: Dictionary) -> void:
@@ -240,8 +278,8 @@ func draw_experiment(experiment: Dictionary) -> void:
 	draw_set_transform(p, 0, Vector2.ONE * tile / 40.0)
 	draw_style_box(LabUI.box(Color(0.01, 0.05, 0.08, 0.35), Color(0, 0, 0, 0), 0, 5), Rect2(5, 12, 72, 66))
 	for q in [Vector2(9, 62), Vector2(64, 62)]: draw_rect(Rect2(q, Vector2(6, 12)), Color("142a35"))
-	draw_style_box(LabUI.box(Color("435e6b"), Color("182f3d"), 0, 4), Rect2(3, 4, 74, 65))
-	draw_line(Vector2(6, 6), Vector2(73, 6), Color("93a8ae"), 1)
+	draw_style_box(LabUI.box(Color("96b9b2"), Color("456e70"), 0, 4), Rect2(3, 4, 74, 65))
+	draw_line(Vector2(6, 6), Vector2(73, 6), Color("f6ebcf"), 1)
 	draw_line(Vector2(5, 65), Vector2(75, 65), Color("1e3644"), 3)
 	match experiment.kind:
 		"optics":
@@ -275,7 +313,7 @@ func draw_experiment(experiment: Dictionary) -> void:
 			draw_style_box(LabUI.box(Color("1b3444"), Color("6e8287"), 0, 6), Rect2(11, 14, 58, 42))
 			for i in range(6):
 				var x = 16 + i * 8
-				draw_style_box(LabUI.box(Color("758b94"), Color("314856"), 0, 3), Rect2(x, 11, 6, 46))
+				draw_style_box(LabUI.box(Color("d9c8a2"), Color("314856"), 0, 3), Rect2(x, 11, 6, 46))
 				draw_rect(Rect2(x + 2, 16, 2, 34), color.darkened(0.4))
 			if active:
 				var y = 20 + fmod(animation_time * 13, 28)
@@ -284,7 +322,7 @@ func draw_experiment(experiment: Dictionary) -> void:
 		"quantum":
 			draw_circle(Vector2(40, 33), 27, Color("142b3a"))
 			for radius in [25, 19, 12]:
-				draw_circle(Vector2(40, 33), radius, Color("728995"), false, 3, true)
+				draw_circle(Vector2(40, 33), radius, Color("d8c49b"), false, 3, true)
 				draw_arc(Vector2(40, 33), radius, 0.3, 2.3, 30, color, 1, true)
 			for i in range(4):
 				var q = Vector2(40, 33) + Vector2.from_angle(i * PI / 2) * 24
@@ -348,17 +386,5 @@ func draw_person(person: Dictionary) -> void:
 
 func draw_bed(bed: Dictionary) -> void:
 	var p = floor_origin + Vector2(bed.x, bed.y) * tile
-	var blanket = Color("699caa")
-	for person in simulation.staff:
-		if person.get("bed", -1) == bed.id: blanket = StaffAppearance.of(person).shirt
-	draw_set_transform(p, 0, Vector2.ONE * tile / 40.0)
-	draw_style_box(LabUI.box(Color(0.04, 0.1, 0.13, 0.28), Color(0, 0, 0, 0), 0, 5), Rect2(5, 7, 33, 73))
-	draw_style_box(LabUI.box(Color("546e79"), Color("2e4757"), 0, 5), Rect2(3, 2, 34, 76))
-	draw_style_box(LabUI.box(Color("d8e2dd"), Color("9babac"), 0, 4), Rect2(5, 5, 30, 69))
-	draw_style_box(LabUI.box(blanket.darkened(0.1), blanket.darkened(0.3), 0, 3), Rect2(7, 29, 26, 42))
-	draw_rect(Rect2(7, 29, 26, 5), blanket.lightened(0.25))
-	draw_line(Vector2(10, 36), Vector2(10, 66), Color(blanket.lightened(0.3), 0.4), 1)
-	draw_style_box(LabUI.box(Color("f1eee2"), Color("becbc6"), 0, 4), Rect2(9, 9, 22, 15))
-	draw_line(Vector2(12, 12), Vector2(28, 12), Color("ffffff"), 1)
-	draw_set_transform(Vector2.ZERO)
+	draw_furniture("bed", Rect2(p, Vector2(tile, tile * 2)))
 	if bed.id == selected_id and selected_kind == "bed": draw_selection(Rect2(p, Vector2(tile, tile * 2)))

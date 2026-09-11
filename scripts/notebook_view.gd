@@ -1,15 +1,15 @@
 class_name NotebookView
 extends PanelContainer
-const PAPER = Color("17232b")
-const INK = Color("d2e6ec")
-const FAINT = Color("8fa7b5")
+const PAPER = Color("eadfc7")
+const INK = Color("304c58")
+const FAINT = Color("687b79")
 func _ready() -> void:
-	var style = LabUI.box(PAPER, Color("62716c"), 12, 5)
+	var style = LabUI.skin(PAPER, 12, "panel")
 	style.content_margin_left = 50
 	add_theme_stylebox_override("panel", style)
 	resized.connect(queue_redraw)
 func _draw() -> void:
-	draw_rect(Rect2(0, 0, 35, size.y), Color("0b161e"))
+	draw_rect(Rect2(0, 0, 35, size.y), Color("416c72"))
 	for y in range(39, int(size.y) - 5, 24): draw_line(Vector2(43, y), Vector2(size.x - 12, y), Color(0.45, 0.65, 0.7, 0.12), 1)
 	draw_line(Vector2(40, 5), Vector2(40, size.y - 5), Color("967c56"), 1)
 	for y in range(19, int(size.y) - 7, 28):

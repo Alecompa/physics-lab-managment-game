@@ -95,7 +95,7 @@ func run_tests() -> void:
 	inputs[0].value = 10
 	check(game.sim.staff[1].rest == 10, "Hours control changes simulated routine")
 	var choices = game.sidebar.find_children("*", "OptionButton", true, false)
-	check(choices.size() == 5, "Activity, field, experiment, desk and bed can be assigned")
+	check(choices.size() == 6, "Activity, field, experiment, desk, bed and supervisor can be assigned")
 	choices[1].select(1)
 	choices[1].item_selected.emit(1)
 	check(game.sim.staff[1].focus == "nuclear", "Field selector changes actual focus")
@@ -133,8 +133,8 @@ func run_tests() -> void:
 	check(sliders.size() == 5, "Each idea provides evidence commitment")
 	check(int(sliders[0].get_meta("idea_id")) == 1, "Unlocked starter optics letter appears before locked rare paper")
 	var paper_labels = game.sidebar.find_children("*", "Label", true, false)
-	check(paper_labels.filter(func(label): return label.text == "No impact required").size() == 4, "Every common starter clearly states no impact requirement")
-	check(paper_labels.filter(func(label): return label.text.begins_with("On publication:") and label.text.contains("+2 impact")).size() == 4, "Common impact rewards are explicitly labeled as publication rewards")
+	check(paper_labels.filter(func(label): return label.text == "No impact required").is_empty(), "Common cards omit redundant requirement text")
+	check(paper_labels.filter(func(label): return label.text == "+2 impact" and label.tooltip_text.contains("only if accepted")).size() == 4, "Common impact rewards are explicitly labeled as publication rewards")
 	for slider in sliders:
 		if int(slider.get_meta("idea_id")) == 1: slider.value = 200
 	check(game.paper_commitments[1] == 200, "Commitment choice persists")
@@ -260,12 +260,12 @@ func run_tests() -> void:
 	game.sim.new_lab()
 	game.sim.choose_program("dark_matter")
 	game._enter_lab()
-	game.sim.analyzed_by_field.optics = 100
+	game.sim.analyzed_by_field.nuclear = 100
 	game.sim.start_paper(1)
 	game.sim.active_paper.stage = "review"; game.sim.active_paper.review_left = 1; game.sim.active_paper.review_roll = 0
 	game.sim.advance_hour()
 	game._close_modal()
-	var second = game.sim.add_idea("optics", "letter")
+	var second = game.sim.add_idea("nuclear", "letter")
 	game.sim.start_paper(second.id)
 	game.sim.active_paper.stage = "review"; game.sim.active_paper.review_left = 1; game.sim.active_paper.review_roll = 0
 	game._statistics()

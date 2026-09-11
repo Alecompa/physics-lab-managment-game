@@ -61,8 +61,8 @@ func run() -> void:
 	for seed_value in range(1, 7): reports.append(moderate_run(seed_value, "vacuum", true))
 	var survived = reports.filter(func(report): return not report.bankrupt).size()
 	print("Moderate expansion: %d/%d runs survived day 75." % [survived, reports.size()])
-	print("Detailed moderate outcomes written to docs/playtest-block1.json")
-	var report_file = FileAccess.open("res://docs/playtest-block1.json", FileAccess.WRITE)
+	print("Detailed moderate outcomes written to docs/playtest-blocks23-economy.json")
+	var report_file = FileAccess.open("res://docs/playtest-blocks23-economy.json", FileAccess.WRITE)
 	report_file.store_string(JSON.stringify({"engine": "Godot 4.7.2", "scope": "Automated 75-day scenarios, not full-program or human validation", "starting_grant": 30000, "small_award": 14000, "small_period": 20, "small_hours": 64, "recovery_policy": "Prioritize rejected small revisions; assign both researchers to proposals below 20 days runway", "expansion_day": 25, "intro_draft_not_before_day": 30, "survived": survived, "runs": reports}, "\t"))
 	report_file.close()
 	check(survived >= 24, "At least 80% of controlled moderate-expansion runs survive the first hour")
@@ -90,7 +90,7 @@ func moderate_run(seed_value: int, kind: String, force_first_rejection: bool) ->
 		if sim.day >= 25 and not expanded:
 			check(sim.hire("researcher"), "Moderate researcher affordable")
 			var researcher = sim.staff.back()
-			researcher.specialty = "optics"; researcher.trait = "diligent"; researcher.personality = "early"
+			researcher.specialty = sim.Programs.PROGRAMS[sim.research_program].field; researcher.trait = "diligent"; researcher.personality = "early"
 			check(sim.place_bed(Vector2i(14, 9)), "Moderate expansion includes a bed")
 			check(sim.place_desk(Vector2i(5, 11)), "Moderate expansion includes a desk")
 			sim.set_assignment(researcher.id, "desk", sim.desks.back().id)
@@ -120,7 +120,7 @@ func moderate_run(seed_value: int, kind: String, force_first_rejection: bool) ->
 		if sim.active_paper.is_empty():
 			var started = false
 			for idea in sim.ideas:
-				if idea.field == "optics" and sim.can_start_paper(idea.id): sim.start_paper(idea.id); started = true; break
+				if idea.field == sim.Programs.PROGRAMS[sim.research_program].field and sim.can_start_paper(idea.id): sim.start_paper(idea.id); started = true; break
 			if not started and sim.study_points >= 8:
 				if sim.ideas.size() >= 6: sim.discard_idea(sim.ideas.back().id)
 				sim.think_idea()

@@ -39,7 +39,7 @@ with tempfile.TemporaryDirectory(prefix="web-build-", dir=exports) as temporary:
         raise RuntimeError("Incomplete Web export")
     if len(files) > 1000 or sum(p.stat().st_size for p in files) > 500_000_000 or any(p.stat().st_size > 200_000_000 for p in files):
         raise RuntimeError("Export exceeds itch.io HTML5 archive limits")
-    package = exports / "fieldwork-v5-web-itch.zip"
+    package = exports / "fieldwork-v8-web-itch.zip"
     with zipfile.ZipFile(package, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for file in files:
             archive.write(file, file.name)

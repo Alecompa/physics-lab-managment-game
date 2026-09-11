@@ -1,0 +1,45 @@
+{
+  "ui": {
+    "button.png": "Grey/Default/button_rectangle_depth_gloss.png",
+    "pressed.png": "Grey/Default/button_rectangle_gloss.png",
+    "panel.png": "Grey/Default/button_square_line.png",
+    "frame.png": "Grey/Default/button_square_depth_border.png",
+    "slider.png": "Grey/Default/slide_horizontal_grey.png",
+    "handle.png": "Blue/Default/slide_hangle.png",
+    "arrow.png": "Extra/Default/icon_arrow_down_light.png",
+    "check.png": "Green/Default/check_square_color_checkmark.png",
+    "unchecked.png": "Grey/Default/check_square_grey.png",
+    "close.png": "Red/Default/icon_cross.png",
+    "heading.ttf": "Font/Kenney Future.ttf",
+    "back.png": "Grey/Default/arrow_basic_w_small.png",
+    "next.png": "Grey/Default/arrow_basic_e_small.png",
+    "play.png": "Extra/Default/icon_play_light.png"
+  },
+  "cursors": {
+    "arrow": "pointer_toon_a",
+    "hand": "hand_point",
+    "pan": "hand_open",
+    "drag": "hand_closed",
+    "crosshair": "target_round_a"
+  },
+  "furniture_models": [
+    "desk",
+    "computerScreen",
+    "computerKeyboard",
+    "computerMouse",
+    "bedSingle",
+    "chairDesk",
+    "pottedPlant",
+    "bookcaseOpen",
+    "kitchenSink",
+    "kitchenCabinet",
+    "kitchenCoffeeMachine",
+    "loungeChair",
+    "tableCoffee"
+  ],
+  "derivatives": {
+    "furniture": "Transparent 2D renders from Furniture Kit GLBs; tools/render_furniture.gd. Desk combines desk, screen, keyboard and mouse.",
+    "ui": "Original PNGs tinted and nine-sliced at runtime; progress bars use an AtlasTexture crop of the slider track.",
+    "cursors": "Original PNGs resized to 32x32 at runtime."
+  }
+}

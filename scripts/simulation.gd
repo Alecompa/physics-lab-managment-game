@@ -27,7 +27,10 @@ const SAVE_PATH = "user://fieldwork_autosave_v5.json"
 const GRID_SIZE = Layout.SIZE
 const DAY_SECONDS = 48.0
 const HOUR_SECONDS = DAY_SECONDS / 24.0
-const WALK_SPEED = 4.0
+const WALK_SPEED = 24.0
+const SUPERVISION_HOURS = 2.0
+var expansion_level = 0
+var layout_style = "rooms"
 
 var proposals: Array = []
 var grant_history: Array = []
@@ -100,6 +103,8 @@ func total(pool: Dictionary) -> float:
 	return result
 
 func new_lab() -> void:
+	expansion_level = 0
+	layout_style = "rooms"
 	rng.randomize()
 	flavor_rng.randomize()
 	grant_rng.randomize()
@@ -146,6 +151,7 @@ func new_lab() -> void:
 		person.personality = "early" if id != 2 else "social"
 		person.desk = id
 		person.bed = id
+		if person.role == "phd": person.supervisor = 3; person.supervision_coverage = 1.0
 		staff.append(person)
 	next_staff_id = 4
 	next_experiment_id = 2
@@ -178,7 +184,7 @@ func make_person(id: int, role: String) -> Dictionary:
 	var analyze = 8 if role == "phd" else 0
 	return {"id": id, "name": Catalog.NAMES[(id - 1) % Catalog.NAMES.size()] + (" %d" % (id / Catalog.NAMES.size() + 1) if id > Catalog.NAMES.size() else ""), "role": role,
 		"specialty": FIELDS.keys()[rng.randi_range(0, 3)], "trait": Catalog.TRAITS.keys()[rng.randi_range(0, 3)], "personality": Catalog.PERSONALITIES.keys()[rng.randi_range(0, 3)],
-		"rest": rest, "acquire": acquire, "analyze": analyze, "duty": "maintain" if role == "technician" else "auto",
+		"supervisor": -1, "supervision_coverage": 0.0, "supervision_today": 0.0, "travel_hours": 0.0, "work_hours": 0.0, "wait_hours": 0.0, "rest": rest, "acquire": acquire, "analyze": analyze, "duty": "maintain" if role == "technician" else "auto",
 		"focus": "any", "experiment": -1, "energy": 100.0, "x": float(Layout.ENTRANCE.x), "y": float(Layout.ENTRANCE.y), "bed": -1, "appearance": rng.randi_range(0, 999999), "desk": -1, "motion": [], "working": false, "last_field": "", "route": [], "destination": [], "status": "Ready", "task": "rest", "target_id": -1}
 
 func _process(delta: float) -> void:
@@ -195,6 +201,9 @@ func role_count(role: String) -> int:
 		if person.role == role: count += 1
 	return count
 
+func research_hours(person: Dictionary) -> int:
+	return maxi(0, activity_hours(person) - supervisees(person.id).size() * 2)
+
 func activity_hours(person: Dictionary) -> int:
 	return 24 - int(person.rest) - int(person.acquire) - int(person.analyze)
 
@@ -203,9 +212,21 @@ func scheduled_task(person: Dictionary, at_hour: int = -1) -> String:
 	if local_hour < person.rest: return "rest"
 	if local_hour < person.rest + person.acquire: return "acquire"
 	if local_hour < person.rest + person.acquire + person.analyze: return "analyze"
-	if person.duty == "auto":
-		return "write" if not active_paper.is_empty() and active_paper.stage == "writing" else "study"
+	if person.duty in ["auto", "write", "proposal"]:
+		return activity_task(person)
 	return person.duty
+
+# Both priorities fall back to the other draft, then study. No automatic submission.
+func activity_task(person: Dictionary) -> String:
+	var paper_ready = not active_paper.is_empty() and active_paper.stage == "writing" and active_paper.progress < active_paper.work - 0.00001
+	var grant_ready = person.role == "researcher" and not writing_proposal().is_empty()
+	if person.duty == "proposal" and grant_ready: return "proposal"
+	if paper_ready: return "write"
+	if grant_ready: return "proposal"
+	return "study"
+
+func can_write_papers(person: Dictionary) -> bool:
+	return person.duty in ["auto", "write"] or person.role == "researcher" and person.duty == "proposal"
 
 func set_schedule(id: int, block: String, hours: int) -> void:
 	if block not in ["rest", "acquire", "analyze"]: return
@@ -224,6 +245,9 @@ func set_schedule(id: int, block: String, hours: int) -> void:
 func set_assignment(id: int, key: String, value: Variant) -> void:
 	for person in staff:
 		if person.id != id: continue
+		if key == "supervisor":
+			assign_supervisor(id, int(value))
+			return
 		if key == "focus" and (value == "any" or FIELDS.has(value)): person.focus = value
 		if key == "duty" and (value in ["auto", "write", "study", "maintain"] or value == "proposal" and person.role == "researcher"): person.duty = value
 		if key == "bed":
@@ -245,10 +269,11 @@ func performance(person: Dictionary, task: String, field: String = "") -> float:
 				nearby = true
 				break
 		factor *= (1.1 if nearby else 1.0) if person.personality == "social" else (0.9 if nearby else 1.1)
+	if person.role == "phd" and task != "maintain": factor *= phd_productivity(person)
 	return factor
 
 func capacity_for(experiment: Dictionary) -> float:
-	return EQUIPMENT[experiment.kind].capacity * (1.0 + 0.5 * (experiment.level - 1)) * experiment.condition / 100.0 * (1.25 if "accelerator" in experiment.get("modules", []) else 1.0)
+	return (18.0 if experiment.get("introductory", false) else EQUIPMENT[experiment.kind].capacity) * (1.0 + 0.5 * (experiment.level - 1)) * experiment.condition / 100.0 * (1.25 if "accelerator" in experiment.get("modules", []) else 1.0)
 
 func capacity() -> float:
 	var amount = 0.0
@@ -268,7 +293,7 @@ func analysis_power() -> float:
 func writing_power() -> float:
 	var amount = 0.0
 	for person in staff:
-		if person.duty in ["auto", "write"]: amount += activity_hours(person) * (0.3 if person.role == "researcher" else 0.12)
+		if can_write_papers(person): amount += research_hours(person) * (0.3 if person.role == "researcher" else 0.12)
 	return amount
 
 func income() -> float:
@@ -277,7 +302,7 @@ func income() -> float:
 func expenses() -> float:
 	var amount = 0.0
 	for person in staff: amount += ROLES[person.role].salary
-	for experiment in experiments: amount += EQUIPMENT[experiment.kind].upkeep * (1.0 + 0.25 * (experiment.level - 1))
+	for experiment in experiments: amount += instrument_upkeep(experiment)
 	return amount
 
 func output_mix(experiment: Dictionary) -> Dictionary:
@@ -299,7 +324,7 @@ func build_navigation(extra_kind: String = "", extra_cell: Vector2i = Vector2i.Z
 	for x in range(Layout.SIZE.x):
 		for y in range(Layout.SIZE.y):
 			var cell = Vector2i(x, y)
-			if Layout.wall(cell) or Layout.fixed_furniture(cell): grid.set_point_solid(cell)
+			if Layout.wall(cell, expansion_level, layout_style) or Layout.fixed_furniture(cell, layout_style): grid.set_point_solid(cell)
 	for object in experiments + desks + beds:
 		for cell in Layout.cells(object.kind, Vector2i(object.x, object.y)): grid.set_point_solid(cell)
 	if extra_kind != "":
@@ -346,14 +371,16 @@ func choose_desk(person: Dictionary, reserved: Dictionary = {}) -> Dictionary:
 			best = desk
 	return best
 
-func placement_error(kind: String, cell: Vector2i) -> String:
-	if kind not in ["desk", "bed"] and not equipment_unlocked(kind): return "Unlock this instrument in Development."
-	if not Layout.room_allows(kind, cell): return "Beds belong along the upper wall of the sleeping area." if kind == "bed" else "Desks belong in the office." if kind == "desk" else "Experiments belong in the two laboratory rooms."
-	if funds < (450.0 if kind == "bed" else 600.0 if kind == "desk" else EQUIPMENT[kind].cost): return "Not enough research funds."
+func placement_error(kind: String, cell: Vector2i, moving: bool = false) -> String:
+	if not moving and kind not in ["desk", "bed"] and not equipment_unlocked(kind): return "Unlock this instrument in Development."
+	if not Layout.room_allows(kind, cell, expansion_level, layout_style): return "Place within the open floor, leaving the entrance and rest seats clear."
+	if not moving and funds < (450.0 if kind == "bed" else 600.0 if kind == "desk" else EQUIPMENT[kind].cost): return "Not enough research funds."
 	for point in Layout.cells(kind, cell):
 		if navigation.is_point_solid(point): return "This space is occupied."
 		for desk in desks:
 			if point == Layout.chair(desk): return "Leave space for this desk's chair."
+		for bed in beds:
+			if point == Layout.bed_access(bed): return "Leave the foot of this bed clear."
 	if kind == "desk" and navigation.is_point_solid(cell + Vector2i.DOWN): return "Leave a free chair space below the desk."
 	var proposed = build_navigation(kind, cell)
 	var objects = experiments.duplicate()
@@ -370,7 +397,7 @@ func placement_error(kind: String, cell: Vector2i) -> String:
 	if kind == "bed": chairs.append(cell + Vector2i(0, 2))
 	if kind == "desk": chairs.append(cell + Vector2i.DOWN)
 	for chair in chairs:
-		if proposed.is_point_solid(chair) or proposed.get_point_path(Layout.ENTRANCE, chair).is_empty(): return "Keep the desks and common room accessible."
+		if not proposed.is_in_boundsv(chair) or proposed.is_point_solid(chair) or proposed.get_point_path(Layout.ENTRANCE, chair).is_empty(): return "Keep the desks and common room accessible."
 	return ""
 
 func place_desk(cell: Vector2i) -> bool:
@@ -379,7 +406,7 @@ func place_desk(cell: Vector2i) -> bool:
 	desks.append({"id": next_desk_id, "kind": "desk", "x": cell.x, "y": cell.y})
 	next_desk_id += 1
 	rebuild_navigation()
-	announce("A desk is ready in the office. Assign it in People.")
+	announce("A desk is ready. Assign it in People.")
 	updated.emit()
 	return true
 
@@ -421,6 +448,7 @@ func travel(person: Dictionary, target: Vector2i) -> float:
 		budget -= used
 		if distance <= used + 0.00001: person.route.pop_front()
 	if not person.route.is_empty(): person.status = "Walking to " + person.task
+	person.travel_hours = person.get("travel_hours", 0.0) + (WALK_SPEED - budget) / WALK_SPEED
 	return budget / WALK_SPEED if person.route.is_empty() else 0.0
 
 func choose_experiment(person: Dictionary, maintaining: bool = false) -> Dictionary:
@@ -436,6 +464,37 @@ func choose_experiment(person: Dictionary, maintaining: bool = false) -> Diction
 			score = value
 			best = experiment
 	return best
+
+func work_activity(person: Dictionary, hours: float, desk_factor: float) -> void:
+	# At most one paper, one proposal and study can share this hour.
+	for unused in range(3):
+		if hours <= 0.00001: break
+		var task = "study" if person.duty == "study" else activity_task(person)
+		person.task = task
+		if task == "write":
+			var rate = desk_factor * (0.3 if person.role == "researcher" else 0.12) * performance(person, "write", active_paper.field)
+			var work = minf(hours * rate, active_paper.work - active_paper.progress)
+			active_paper.progress += work
+			hours -= work / maxf(rate, 0.00001)
+			last_written += work
+			person.last_field = active_paper.field
+			person.status = "Writing " + FIELDS[active_paper.field].name
+		elif task == "proposal":
+			var proposal = writing_proposal()
+			var rate = desk_factor * performance(person, "write")
+			var work = minf(hours * rate, proposal.work - proposal.progress)
+			proposal.progress += work
+			hours -= work / maxf(rate, 0.00001)
+			total_proposal_hours += work
+			person.status = "Preparing " + Funding.SPECS[proposal.kind].name
+			if proposal.progress >= proposal.work - 0.00001:
+				proposal.stage = "ready"
+				announce("Proposal ready to submit.")
+				grants_changed.emit()
+		else:
+			study_points += hours * desk_factor * (0.35 if person.role == "researcher" else 0.12) * performance(person, "study", person.specialty)
+			person.status = "Studying " + FIELDS[person.specialty].name
+			break
 
 func advance_hour() -> void:
 	# The pending feedback is a hard simulation stop, including direct test calls.
@@ -453,15 +512,17 @@ func advance_hour() -> void:
 		person.motion = []
 		var task = scheduled_task(person)
 		if person.energy < 8.0: task = "rest"
+		if person.role == "researcher" and task not in ["rest", "acquire", "analyze"] and supervision_remaining(person.id) > 0.00001: task = "supervise"
 		person.task = task
 		person.target_id = -1
 		var target = Layout.REST_SEATS[int(person.id) % Layout.REST_SEATS.size()]
 		var sleeping_bed = reachable_bed(person) if task == "rest" else {}
 		if not sleeping_bed.is_empty(): target = Layout.bed_access(sleeping_bed)
 		var desk_factor = 1.0
-		if task in ["analyze", "write", "study", "proposal"]:
+		if task in ["analyze", "write", "study", "proposal", "supervise"]:
 			var desk = choose_desk(person, desk_reservations)
 			if desk.is_empty():
+				person.wait_hours = person.get("wait_hours", 0.0) + 1.0
 				person.status = "Waiting: no free, reachable desk"
 				continue
 			desk_reservations[desk.id] = person.id
@@ -472,6 +533,7 @@ func advance_hour() -> void:
 			experiment = choose_experiment(person, task == "maintain")
 			if experiment.is_empty():
 				person.status = "No matching accessible experiment"
+				person.wait_hours = person.get("wait_hours", 0.0) + 1.0
 				continue
 			person.target_id = experiment.id
 			target = interaction_cell(person, experiment)
@@ -483,15 +545,36 @@ func advance_hour() -> void:
 		person.energy = maxf(0.0, person.energy - 2.0)
 		if time_left <= 0: continue
 		person.working = true
+		if task == "supervise":
+			var available = time_left
+			for student in supervisees(person.id):
+				var used = minf(available, SUPERVISION_HOURS - student.get("supervision_today", 0.0))
+				student.supervision_today = student.get("supervision_today", 0.0) + used
+				available -= used
+			person.work_hours = person.get("work_hours", 0.0) + time_left - available
+			person.status = "Supervising PhDs"
+			if available <= 0.00001: continue
+			time_left = available
+			task = scheduled_task(person)
+			person.task = task
+			# A maintenance shift needs another destination; resume it next hour.
+			if task == "maintain":
+				person.wait_hours = person.get("wait_hours", 0.0) + time_left
+				continue
 		match task:
 			"acquire":
 				if occupancy[experiment.id] >= 2:
 					person.working = false
+					person.wait_hours = person.get("wait_hours", 0.0) + time_left
 					person.status = "Waiting: both bench positions occupied"
 					continue
 				occupancy[experiment.id] += 1
 				var work = minf(capacities[experiment.id], time_left * 0.6 * performance(person, task, EQUIPMENT[experiment.kind].field) * (1.25 if "accelerator" in experiment.get("modules", []) else 1.0))
 				capacities[experiment.id] -= work
+				var rate = 0.6 * performance(person, task, EQUIPMENT[experiment.kind].field) * (1.25 if "accelerator" in experiment.get("modules", []) else 1.0)
+				var operating_hours = work / maxf(rate, 0.00001)
+				experiment.condition = maxf(35.0, experiment.condition - operating_hours * (0.10 if person.role == "phd" else 0.04))
+				experiment.operating_hours = experiment.get("operating_hours", 0.0) + operating_hours
 				for field in output_mix(experiment): raw_by_field[field] += work * output_mix(experiment)[field]
 				person.working = work > 0
 				person.last_field = EQUIPMENT[experiment.kind].field
@@ -511,37 +594,13 @@ func advance_hour() -> void:
 				person.last_field = field
 				last_analyzed += amount
 				person.status = "Analyzing " + FIELDS[field].name if amount > 0 else "Waiting for " + ("raw data" if person.focus == "any" else FIELDS[field].name + " data")
-			"write":
-				if active_paper.is_empty() or active_paper.stage != "writing":
-					person.working = false
-					person.status = "Waiting for a manuscript"
-					continue
-				var work = time_left * desk_factor * (0.3 if person.role == "researcher" else 0.12) * performance(person, task, active_paper.field)
-				work = minf(work, active_paper.work - active_paper.progress)
-				active_paper.progress += work
-				person.last_field = active_paper.field
-				last_written += work
-				person.status = "Writing " + FIELDS[active_paper.field].name
-			"proposal":
-				var proposal = writing_proposal()
-				if person.role != "researcher" or proposal.is_empty():
-					person.working = false
-					person.status = "No proposal to write; choose Auto to write papers or study"
-					continue
-				var work = minf(time_left * desk_factor * performance(person, "write"), proposal.work - proposal.progress)
-				proposal.progress += work
-				total_proposal_hours += work
-				person.status = "Preparing " + Funding.SPECS[proposal.kind].name
-				if proposal.progress >= proposal.work - 0.00001:
-					proposal.stage = "ready"
-					announce("Proposal ready. Open Grants to check the estimate and submit.")
-					grants_changed.emit()
-			"study":
-				study_points += time_left * desk_factor * (0.35 if person.role == "researcher" else 0.12) * performance(person, task, person.specialty)
-				person.status = "Studying " + FIELDS[person.specialty].name
+			"write", "proposal", "study":
+				work_activity(person, time_left, desk_factor)
 			"maintain":
-				experiment.condition = minf(100.0, experiment.condition + time_left * 0.8 * performance(person, task))
+				experiment.condition = minf(100.0, experiment.condition + time_left * (1.2 if person.role == "technician" else 0.45) * performance(person, task))
 				person.status = "Servicing %s #%d" % [EQUIPMENT[experiment.kind].name, experiment.id]
+		if person.working: person.work_hours = person.get("work_hours", 0.0) + time_left
+		else: person.wait_hours = person.get("wait_hours", 0.0) + time_left
 	if not active_paper.is_empty():
 		if active_paper.stage == "review":
 			active_paper.review_left -= 1
@@ -564,7 +623,9 @@ func advance_hour() -> void:
 	if hour >= 24:
 		hour = 0
 		day += 1
-		for experiment in experiments: experiment.condition = maxf(35.0, experiment.condition - 0.45)
+		for student in staff:
+			student.supervision_coverage = clampf(student.get("supervision_today", 0.0) / SUPERVISION_HOURS, 0.0, 1.0)
+			student.supervision_today = 0.0
 		record_resources()
 		autosave_days += 1
 		last_produced = 0.0
@@ -621,6 +682,7 @@ func upgrade_experiment(id: int) -> bool:
 	if experiment.is_empty() or upgrade_block_reason(experiment) != "": return false
 	funds -= upgrade_cost(experiment)
 	experiment.level += 1
+	experiment.introductory = false
 	experiment.condition = 100.0
 	announce("%s upgraded to level %d." % [EQUIPMENT[experiment.kind].name, experiment.level])
 	updated.emit()
@@ -628,8 +690,8 @@ func upgrade_experiment(id: int) -> bool:
 
 func service_experiment(id: int) -> bool:
 	var experiment = experiment_by_id(id)
-	if experiment.is_empty() or experiment.condition >= 99.9 or funds < 250: return false
-	funds -= 250
+	if experiment.is_empty() or experiment.condition >= 99.9 or funds < service_cost(experiment): return false
+	funds -= service_cost(experiment)
 	experiment.condition = 100.0
 	updated.emit()
 	return true
@@ -661,6 +723,10 @@ func hire(role: String) -> bool:
 func dismiss(id: int) -> bool:
 	for person in staff:
 		if person.id == id:
+			for student in supervisees(id):
+				student.supervisor = -1
+				student.supervision_coverage = 0.0
+				student.supervision_today = 0.0
 			staff.erase(person)
 			announce(person.name + " left the lab.")
 			updated.emit()
@@ -788,6 +854,7 @@ func cancel_paper() -> void:
 	updated.emit()
 
 func unlock_upgrade(key: String) -> bool:
+	if key == "campus_planning" and program_level < 3: return false
 	if not UPGRADES.has(key) or key in unlocked or prestige < UPGRADES[key].cost: return false
 	if UPGRADES[key].requires != "" and UPGRADES[key].requires not in unlocked: return false
 	prestige -= UPGRADES[key].cost
@@ -799,7 +866,7 @@ func unlock_upgrade(key: String) -> bool:
 func bottleneck() -> String:
 	if not pending_result.is_empty(): return "A referee decision is waiting. Read it before resuming."
 	if not active_paper.is_empty(): return "Peer review in progress. Students can prepare the next dataset." if active_paper.stage == "review" else "A manuscript is being written. Assign activity time to writing."
-	if writing_power() <= 0: return "Assign activity hours to Auto or Write so somebody can write a paper."
+	if writing_power() <= 0: return "Assign Activity to Papers first so somebody can write a paper."
 	for idea in ideas:
 		if can_start_paper(idea.id): return "An idea has enough evidence. Choose a data commitment in Papers."
 	if study_points >= 8 and ideas.size() < 6: return "Study points are ready. Think of a new idea in Papers."
@@ -812,13 +879,22 @@ func announce(message: String) -> void:
 	announcement.emit(message)
 
 func snapshot() -> Dictionary:
-	var result = {"version": 5, "grant_rng_state": str(grant_rng.state), "grant_rng_seed": str(grant_rng.seed), "rng_state": str(rng.state), "rng_seed": str(rng.seed), "flavor_state": str(flavor_rng.state), "flavor_seed": str(flavor_rng.seed), "saved_at": Time.get_datetime_string_from_system()}
+	var result = {"version": 7, "layout_style": layout_style, "expansion_level": expansion_level, "grant_rng_state": str(grant_rng.state), "grant_rng_seed": str(grant_rng.seed), "rng_state": str(rng.state), "rng_seed": str(rng.seed), "flavor_state": str(flavor_rng.state), "flavor_seed": str(flavor_rng.seed), "saved_at": Time.get_datetime_string_from_system()}
 	for key in ["funds", "raw_by_field", "analyzed_by_field", "prestige", "lifetime_impact", "published", "day", "hour", "experiments", "staff", "candidates", "active_paper", "pending_result", "ideas", "unlocked", "history", "log_entries", "next_staff_id", "next_experiment_id", "next_idea_id", "total_grants", "rescue_count", "study_points", "desks", "next_desk_id", "lab_name", "resource_history", "recent_flavor", "next_flavor_hour", "discoveries_without_legendary", "beds", "next_bed_id", "research_program", "program_level", "pending_milestone", "proposals", "grant_history", "grant_results", "grant_next_days", "intro_grant_completed", "first_submission_day", "last_publication_day", "total_proposal_hours", "tutorial_enabled", "bankrupt"]:
 		var value = get(key)
 		result[key] = value.duplicate(true) if value is Dictionary or value is Array else value
 	return result
 
 func save_lab(notify_user: bool = true, path: String = SAVE_PATH) -> bool:
+	# Keep one untouched copy before upgrading the on-disk schema in place.
+	if FileAccess.file_exists(path):
+		var previous = JSON.parse_string(FileAccess.get_file_as_string(path))
+		if previous is Dictionary and (previous.get("version") == 5 or previous.get("version") == 6):
+			var backup = path + ".v%d-backup" % int(previous.version)
+			if not FileAccess.file_exists(backup):
+				if DirAccess.copy_absolute(ProjectSettings.globalize_path(path), ProjectSettings.globalize_path(backup)) != OK:
+					if notify_user: announce("Could not back up the old save. Save to another slot.")
+					return false
 	var file = FileAccess.open(path + ".tmp", FileAccess.WRITE)
 	if file == null:
 		if notify_user: announce("Could not save the lab.")
@@ -846,10 +922,20 @@ func load_lab(path: String = SAVE_PATH) -> bool:
 	var used_small = data.grant_history.any(func(result): return result.kind == "small") or data.proposals.any(func(proposal): return proposal.kind == "small" and proposal.submitted > 0)
 	if not used_small: data.grant_next_days.small = 1
 	for key in snapshot():
-		if key not in ["version", "rng_state", "rng_seed", "flavor_state", "flavor_seed", "grant_rng_state", "grant_rng_seed", "saved_at"]: set(key, data[key])
-	for key in ["prestige", "lifetime_impact", "published", "day", "hour", "next_staff_id", "next_experiment_id", "next_idea_id", "rescue_count", "next_desk_id", "next_flavor_hour", "discoveries_without_legendary", "next_bed_id", "program_level"]:
+		if key not in ["version", "rng_state", "rng_seed", "flavor_state", "flavor_seed", "grant_rng_state", "grant_rng_seed", "saved_at"]: set(key, data.get(key, "open") if key == "layout_style" else data.get(key, 0) if key == "expansion_level" else data[key])
+	for key in ["expansion_level", "prestige", "lifetime_impact", "published", "day", "hour", "next_staff_id", "next_experiment_id", "next_idea_id", "rescue_count", "next_desk_id", "next_flavor_hour", "discoveries_without_legendary", "next_bed_id", "program_level"]:
 		set(key, int(get(key)))
+	if data.version == 5:
+		for student in staff:
+			if student.role != "phd" or student.has("supervisor"): continue
+			for mentor in staff:
+				if mentor.role == "researcher" and supervisees(mentor.id).size() < 2 and activity_hours(mentor) >= (supervisees(mentor.id).size() + 1) * 2:
+					student.supervisor = mentor.id
+					student.supervision_coverage = 1.0
+					break
 	for person in staff + candidates.values():
+		for key in ["supervision_coverage", "supervision_today", "travel_hours", "work_hours", "wait_hours"]: person[key] = person.get(key, 0.0)
+		person.supervisor = int(person.get("supervisor", -1))
 		for key in ["id", "rest", "acquire", "analyze", "experiment", "desk", "bed"]: person[key] = int(person[key])
 	for proposal in proposals:
 		if not proposal.has("review_duration"): proposal.review_duration = 120 if proposal.kind == "intro" and proposal.review_left > 24 else Funding.SPECS[proposal.kind].review
@@ -879,7 +965,11 @@ func numeric(value: Variant) -> bool:
 	return (value is float or value is int) and is_finite(float(value)) and value >= 0
 
 func valid_save(data: Variant) -> bool:
-	if not data is Dictionary or data.get("version") != 5: return false
+	if not data is Dictionary or (data.get("version") != 5 and data.get("version") != 6 and data.get("version") != 7): return false
+	var saved_style = data.get("layout_style", "open")
+	if saved_style not in ["rooms", "open"] or data.version == 7 and not data.has("layout_style"): return false
+	var saved_expansion = data.get("expansion_level", 0)
+	if not numeric(saved_expansion) or saved_expansion != floorf(saved_expansion) or saved_expansion > 2: return false
 	for key in ["funds", "prestige", "lifetime_impact", "published", "day", "hour", "next_staff_id", "next_experiment_id", "next_idea_id", "total_grants", "rescue_count", "study_points", "next_desk_id", "next_flavor_hour", "discoveries_without_legendary"]:
 		if not numeric(data.get(key)): return false
 	if not valid_funding_save(data): return false
@@ -915,7 +1005,7 @@ func valid_save(data: Variant) -> bool:
 		if not bed is Dictionary or bed.get("kind") != "bed": return false
 		for key in ["id", "x", "y"]:
 			if not numeric(bed.get(key)): return false
-		if bed.id in bed_ids or not Layout.room_allows("bed", Vector2i(bed.x, bed.y)): return false
+		if bed.id in bed_ids or not Layout.room_allows("bed", Vector2i(bed.x, bed.y), saved_expansion, saved_style): return false
 		bed_ids.append(bed.id)
 		for cell in Layout.cells("bed", Vector2i(bed.x, bed.y)):
 			if occupied.has(cell): return false
@@ -925,8 +1015,8 @@ func valid_save(data: Variant) -> bool:
 		if not desk is Dictionary or desk.get("kind") != "desk": return false
 		for key in ["id", "x", "y"]:
 			if not numeric(desk.get(key)): return false
-		if not numeric(desk.get("level", 1)) or desk.get("level", 1) not in [1, 2, 3]: return false
-		if desk.id in desk_ids or not Layout.room_allows("desk", Vector2i(desk.x, desk.y)): return false
+		if not numeric(desk.get("level", 1)) or int(desk.get("level", 1)) not in [1, 2, 3] or desk.get("level", 1) != floorf(desk.get("level", 1)): return false
+		if desk.id in desk_ids or not Layout.room_allows("desk", Vector2i(desk.x, desk.y), saved_expansion, saved_style): return false
 		desk_ids.append(desk.id)
 		for cell in Layout.cells("desk", Vector2i(desk.x, desk.y)):
 			if occupied.has(cell): return false
@@ -936,13 +1026,15 @@ func valid_save(data: Variant) -> bool:
 		if not experiment is Dictionary or not EQUIPMENT.has(experiment.get("kind", "")): return false
 		for key in ["id", "x", "y", "level", "condition"]:
 			if not numeric(experiment.get(key)): return false
+		if not experiment.get("introductory", false) is bool or not numeric(experiment.get("operating_hours", 0.0)): return false
+		if experiment.get("introductory", false) and experiment.level != 1: return false
 		if not experiment.get("modules", []) is Array or experiment.get("modules", []).size() > 2: return false
 		var unique_modules = []
 		for module in experiment.get("modules", []):
 			if not Catalog.MODULES.has(module) or module in unique_modules: return false
 			unique_modules.append(module)
 		var cell = Vector2i(experiment.x, experiment.y)
-		if experiment.id in experiment_ids or not Layout.room_allows(experiment.kind, cell) or experiment.level < 1 or experiment.level > 3 or experiment.condition < 35 or experiment.condition > 100: return false
+		if experiment.id in experiment_ids or not Layout.room_allows(experiment.kind, cell, saved_expansion, saved_style) or experiment.level < 1 or experiment.level > 3 or experiment.condition < 35 or experiment.condition > 100: return false
 		for footprint_cell in Layout.cells(experiment.kind, cell):
 			if occupied.has(footprint_cell): return false
 			occupied[footprint_cell] = true
@@ -956,7 +1048,7 @@ func valid_save(data: Variant) -> bool:
 	for x in range(Layout.SIZE.x):
 		for y in range(Layout.SIZE.y):
 			var cell = Vector2i(x, y)
-			if Layout.wall(cell) or Layout.fixed_furniture(cell) or occupied.has(cell): saved_grid.set_point_solid(cell)
+			if Layout.wall(cell, saved_expansion, saved_style) or Layout.fixed_furniture(cell, saved_style) or occupied.has(cell): saved_grid.set_point_solid(cell)
 	for desk in data.desks:
 		if saved_grid.get_point_path(Layout.ENTRANCE, Layout.chair(desk)).is_empty(): return false
 	for experiment in data.experiments:
@@ -978,6 +1070,16 @@ func valid_save(data: Variant) -> bool:
 			assigned_beds.append(person.bed)
 		if not numeric(person.get("appearance")): return false
 		staff_ids.append(person.id)
+	var mentor_counts = {}
+	for person in data.staff:
+		if Layout.wall(Vector2i(roundi(person.x), roundi(person.y)), saved_expansion, saved_style): return false
+		var mentor_id = person.get("supervisor", -1)
+		if mentor_id == -1: continue
+		if person.role != "phd": return false
+		var mentors = data.staff.filter(func(member): return member.id == mentor_id and member.role == "researcher")
+		if mentors.size() != 1: return false
+		mentor_counts[mentor_id] = mentor_counts.get(mentor_id, 0) + 1
+		if mentor_counts[mentor_id] > 2: return false
 	for role in ROLES:
 		if not valid_person(data.candidates.get(role)) or data.candidates[role].role != role: return false
 	for key in data.unlocked:
@@ -1004,10 +1106,14 @@ func valid_save(data: Variant) -> bool:
 
 func valid_person(person: Variant) -> bool:
 	if not person is Dictionary: return false
+	for key in ["supervision_coverage", "supervision_today", "travel_hours", "work_hours", "wait_hours"]:
+		if not numeric(person.get(key, 0.0)): return false
+	if person.get("supervision_coverage", 0.0) > 1 or person.get("supervision_today", 0.0) > SUPERVISION_HOURS: return false
+	if person.get("supervisor", -1) != -1 and not numeric(person.get("supervisor")): return false
 	if not person.get("name") is String or not ROLES.has(person.get("role", "")) or not FIELDS.has(person.get("specialty", "")) or not Catalog.TRAITS.has(person.get("trait", "")) or not Catalog.PERSONALITIES.has(person.get("personality", "")): return false
 	for key in ["id", "rest", "acquire", "analyze", "energy", "x", "y"]:
 		if not numeric(person.get(key)): return false
-	if person.rest + person.acquire + person.analyze > 24 or person.energy > 100 or person.x > 18 or person.y > 12: return false
+	if person.rest + person.acquire + person.analyze > 24 or person.energy > 100 or person.x >= Layout.SIZE.x - 1 or person.y >= Layout.SIZE.y - 1: return false
 	if person.get("focus") != "any" and not FIELDS.has(person.get("focus", "")): return false
 	if person.get("duty") not in ["auto", "write", "study", "maintain", "proposal"]: return false
 	if person.duty == "proposal" and person.role != "researcher": return false
@@ -1034,7 +1140,7 @@ func roll_tier() -> String:
 
 func scheduled_to_write(person: Dictionary, at_hour: int) -> bool:
 	var local_hour = posmod(at_hour - Catalog.PERSONALITIES[person.personality].shift, 24)
-	return local_hour >= person.rest + person.acquire + person.analyze and person.duty in ["auto", "write"]
+	return local_hour >= person.rest + person.acquire + person.analyze + supervisees(person.id).size() * 2 and can_write_papers(person) and not (person.duty == "proposal" and not writing_proposal().is_empty())
 
 func writing_availability() -> Dictionary:
 	var assigned = 0
@@ -1043,15 +1149,15 @@ func writing_availability() -> Dictionary:
 	var names = PackedStringArray()
 	var desk_count = 0
 	for person in staff:
-		if person.duty not in ["auto", "write"] or activity_hours(person) == 0: continue
-		assigned += activity_hours(person)
+		if not can_write_papers(person) or research_hours(person) == 0: continue
+		assigned += research_hours(person)
 		if choose_desk(person).is_empty(): continue
 		desk_count += 1
-		names.append(person.name + ": %dh/day" % activity_hours(person))
+		names.append(person.name + ": %dh/day" % research_hours(person))
 		if scheduled_to_write(person, hour): now += 1
 		for offset in range(24):
 			if scheduled_to_write(person, (hour + offset) % 24): next = mini(next, offset); break
-	var summary = "No writing hours assigned" if assigned == 0 else "Writers need a reachable desk" if desk_count == 0 else "%d writer%s scheduled now" % [now, "" if now == 1 else "s"] if now > 0 else "Next writing shift in %dh" % next
+	var summary = "No writing hours assigned" if assigned == 0 else "Writers need a reachable desk" if desk_count == 0 else "%d writer%s scheduled now" % [now, "" if now == 1 else "s"] if now > 0 else "Grant draft has priority" if next == 99 else "Next writing shift in %dh" % next
 	return {"hours": assigned, "now": now, "next": next, "desks": desk_count, "summary": summary, "detail": "\n".join(names)}
 
 func paper_block_reason(id: int, commitment: float = 1.0) -> String:
@@ -1061,7 +1167,7 @@ func paper_block_reason(id: int, commitment: float = 1.0) -> String:
 	if not active_paper.is_empty(): return "A manuscript is already active."
 	if lifetime_impact < JOURNALS[idea.kind].prestige: return "Requires %d lifetime impact." % JOURNALS[idea.kind].prestige
 	var writing = writing_availability()
-	if writing.hours == 0: return "No writing hours. Open People and assign Auto or Write activity."
+	if writing.hours == 0: return "No writing hours. Open People and choose a writing priority."
 	if writing.desks == 0: return "No reachable writing desk. Place or assign a desk in the office."
 	for field in dataset_cost(idea, commitment):
 		if analyzed_by_field[field] < dataset_cost(idea, commitment)[field]: return "Need %.0f more %s evidence." % [ceilf(dataset_cost(idea, commitment)[field] - analyzed_by_field[field]), FIELDS[field].name]
@@ -1158,6 +1264,7 @@ func remove_bed(id: int) -> bool:
 	return true
 
 func upgrade_block_reason(experiment: Dictionary) -> String:
+	if experiment.get("introductory", false) and not equipment_unlocked(experiment.kind): return "Unlock the advanced instrument branch first"
 	if experiment.level >= 3: return "Maximum level"
 	var technology = "precision" if experiment.level == 1 else "advanced_instruments"
 	if technology not in unlocked: return "Requires " + UPGRADES[technology].name
@@ -1211,6 +1318,19 @@ func remove_module(id: int, key: String) -> bool:
 func choose_program(key: String) -> bool:
 	if research_program != "" or not Programs.PROGRAMS.has(key): return false
 	research_program = key
+	# Setup is only applied to an untouched opening, never to an established save.
+	if day == 1 and hour == 8 and published == 0 and experiments.size() == 1 and raw_data + analyzed_data == 0:
+		var spec = Programs.PROGRAMS[key]
+		experiments[0].kind = spec.starter
+		experiments[0].introductory = true
+		for person in staff: person.specialty = spec.field
+		ideas.clear()
+		next_idea_id = 1
+		for i in range(3): add_idea(spec.field, "letter")
+		add_idea(spec.field, "article")
+		add_idea(spec.secondary, "letter")
+		announce(spec.opening)
+		ideas_changed.emit()
 	update_program()
 	progression_changed.emit()
 	updated.emit()
@@ -1309,7 +1429,7 @@ func start_proposal(kind: String, extra: float = 0.0) -> bool:
 	var revision = not old.is_empty() and old.stage == "rejected"
 	if not old.is_empty(): proposals.erase(old)
 	proposals.append({"kind": kind, "stage": "writing", "work": work, "progress": credit, "extra": extra, "credit": 0.0, "revision": revision, "chance": 0.0, "review_roll": 0.0, "review_left": 0, "submitted": 0, "started": day})
-	announce("Draft opened: " + Funding.SPECS[kind].name + ". Assign a researcher's Activity to Proposal.")
+	announce("Draft opened: " + Funding.SPECS[kind].name + ". Researchers will use free Activity hours.")
 	grants_changed.emit()
 	updated.emit()
 	return true
@@ -1387,17 +1507,20 @@ func acknowledge_grant() -> void:
 
 func tutorial_step() -> Dictionary:
 	if bankrupt: return {"page": "Grants", "text": "The laboratory is insolvent. Review your costs, then load a save or start again."}
-	if intro_grant_completed: return {"page": "Grants", "text": "Introduction complete. Plan the next call and keep publishing. Spending impact unlocks technology; it does not reduce university support."}
+	if intro_grant_completed: return {"page": "Grants", "text": "Keep publishing and plan the next grant."}
 	var intro = proposal_for("intro")
 	if not intro.is_empty():
-		if intro.stage == "review": return {"page": "Grants", "text": "Grant under review. Return the researcher to Auto to write or study while you wait."}
-		if intro.stage == "ready": return {"page": "Grants", "text": "Your proposal is ready. Check the guaranteed award and submit it in Grants."}
-		return {"page": "Grants", "text": "Assign a researcher to Proposal. Their Activity hours now prepare the grant instead of writing or studying."}
-	if first_submission_day > 0: return {"page": "Grants", "text": "First paper submitted. Open the introductory grant, then assign a researcher to Proposal. Paper acceptance is not required."}
-	if not active_paper.is_empty(): return {"page": "People", "text": "The manuscript needs writing. Keep the researcher on Auto or Write with Activity hours and a reachable desk; submission follows automatically."}
-	if analyzed_by_field.optics >= 18: return {"page": "Papers", "text": "You have 18 optics evidence. Open Papers and start the common optics letter. Papers earn impact; grants pay the bills."}
-	if raw_data + analyzed_data > 0: return {"page": "People", "text": "Data must be analyzed at a desk. Your PhDs already collect and analyze each day. Wait for 18 optics evidence; keep their beds assigned."}
-	return {"page": "People", "text": "Press Resume or Space. The two PhDs collect and analyze; the researcher studies. One day takes 48 seconds at 1x. Pause whenever you need to plan."}
+		if intro.stage == "review": return {"page": "Grants", "text": "Grant in review. Researchers resume papers or study."}
+		if intro.stage == "ready": return {"page": "Grants", "text": "Proposal ready. Submit it in Grants."}
+		return {"page": "Grants", "text": "Draft in progress. Choose Grants first to prioritize it."}
+	if first_submission_day > 0: return {"page": "Grants", "text": "First paper submitted. Start the introductory grant."}
+	if not active_paper.is_empty(): return {"page": "People", "text": "Manuscript in progress. Choose Papers first to prioritize it."}
+	var field = Programs.PROGRAMS[research_program].field if research_program != "" else "optics"
+	var available_fields = installed_fields()
+	if field not in available_fields and not available_fields.is_empty(): field = available_fields[0]
+	if analyzed_by_field[field] >= 18: return {"page": "Papers", "text": "Start a common %s letter in Papers." % FIELDS[field].name}
+	if raw_data + analyzed_data > 0: return {"page": "People", "text": "Collect 18 %s evidence for a common paper." % FIELDS[field].name}
+	return {"page": "People", "text": "Press Space to start. Your PhDs collect and analyze."}
 
 func valid_funding_save(data: Dictionary) -> bool:
 	for key in ["bankrupt", "intro_grant_completed", "tutorial_enabled"]:
@@ -1444,4 +1567,92 @@ func valid_funding_save(data: Dictionary) -> bool:
 		# Historical awards keep their original amounts across balance revisions.
 		var awards = [24000.0, 30000.0] if result.kind == "startup" else [12000.0, 14000.0] if result.kind == "small" else [Funding.SPECS[result.kind].amount]
 		if result.accepted and result.amount not in awards or not result.accepted and result.amount != 0.0: return false
+	return true
+
+func person_by_id(id: int) -> Dictionary:
+	for person in staff:
+		if person.id == id: return person
+	return {}
+
+func supervisees(id: int) -> Array:
+	return staff.filter(func(person): return person.role == "phd" and person.get("supervisor", -1) == id)
+
+func assign_supervisor(student_id: int, mentor_id: int) -> bool:
+	var student = person_by_id(student_id)
+	var mentor = person_by_id(mentor_id)
+	if student.is_empty() or student.role != "phd": return false
+	if student.get("supervisor", -1) == mentor_id: return true
+	if mentor_id != -1 and (mentor.is_empty() or mentor.role != "researcher" or supervisees(mentor_id).size() >= 2): return false
+	student.supervisor = mentor_id
+	student.supervision_coverage = 0.0
+	student.supervision_today = 0.0
+	updated.emit()
+	return true
+
+func supervision_remaining(mentor_id: int) -> float:
+	var amount = 0.0
+	for student in supervisees(mentor_id): amount += SUPERVISION_HOURS - student.get("supervision_today", 0.0)
+	return maxf(0.0, amount)
+
+func phd_productivity(student: Dictionary) -> float:
+	var mentor = person_by_id(student.get("supervisor", -1))
+	if mentor.is_empty() or mentor.role != "researcher": return 0.6
+	return 0.6 + 0.4 * student.get("supervision_coverage", 0.0)
+
+func supervision_summary(person: Dictionary) -> String:
+	if person.role == "phd":
+		var mentor = person_by_id(person.get("supervisor", -1))
+		return "%s · %.0f%% productivity\nMentoring today: %.1f/2h" % ["Unsupervised" if mentor.is_empty() else mentor.name, phd_productivity(person) * 100, person.get("supervision_today", 0.0)]
+	if person.role == "researcher":
+		var count = supervisees(person.id).size()
+		return "%d/2 PhDs · %dh reserved\n%.1fh mentoring left%s" % [count, count * 2, supervision_remaining(person.id), " / INSUFFICIENT ACTIVITY" if activity_hours(person) < count * 2 else ""]
+	return "Maintenance: 1.2 condition/hour before energy and traits; other roles 0.45."
+
+func instrument_upkeep(experiment: Dictionary) -> float:
+	return (60.0 if experiment.get("introductory", false) else EQUIPMENT[experiment.kind].upkeep) * (1.0 + 0.25 * (experiment.level - 1))
+
+func service_cost(experiment: Dictionary) -> float:
+	return ceilf(maxf(60.0, (100.0 - experiment.condition) * 12.0))
+
+func expansion_reason() -> String:
+	if expansion_level >= 2: return "All wings open"
+	if program_level < 3: return "Complete the third research milestone"
+	if "campus_planning" not in unlocked: return "Unlock Campus planning in Development"
+	if expansion_level == 1 and program_level < 4: return "Complete the major discovery for the second wing"
+	if funds < expansion_cost(): return "Not enough funds"
+	return ""
+
+func expansion_cost() -> float:
+	return 45000.0 if expansion_level == 0 else 75000.0
+
+func expand_lab() -> bool:
+	if expansion_reason() != "": return false
+	funds -= expansion_cost()
+	expansion_level += 1
+	rebuild_navigation()
+	announce("A new laboratory wing is open. Place instruments, desks and beds in the additional floor space.")
+	updated.emit()
+	return true
+
+func relocation_error(kind: String, id: int, cell: Vector2i) -> String:
+	var group = beds if kind == "bed" else desks if kind == "desk" else experiments
+	var object = bed_by_id(id) if kind == "bed" else desk_by_id(id) if kind == "desk" else experiment_by_id(id)
+	if object.is_empty() or object.kind != kind: return "Object no longer exists"
+	var index = group.find(object)
+	group.remove_at(index)
+	var original_navigation = navigation
+	navigation = build_navigation()
+	var reason = placement_error(kind, cell, true)
+	navigation = original_navigation
+	group.insert(index, object)
+	return reason
+
+func relocate_object(kind: String, id: int, cell: Vector2i) -> bool:
+	if relocation_error(kind, id, cell) != "": return false
+	var object = bed_by_id(id) if kind == "bed" else desk_by_id(id) if kind == "desk" else experiment_by_id(id)
+	object.x = cell.x
+	object.y = cell.y
+	rebuild_navigation()
+	announce("Workstation moved. Assignments, upgrades and condition retained.")
+	updated.emit()
 	return true

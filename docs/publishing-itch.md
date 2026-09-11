@@ -1,16 +1,18 @@
 # Pubblicare Fieldwork su itch.io
 
-Build web della versione 5, preparata l'8 settembre 2026 con Godot 4.7.2.
+Build corrente: versione 8, Godot 4.7.2. I controlli storici della prima build qui sotto si riferiscono alla versione 5. Per le nuove funzionalità e verifiche vedi le [note della versione 8](releases/iteration-8.md).
 
-La prima pubblicazione su itch.io è stata completata dallo sviluppatore e confermata in chat. Le istruzioni restano come riferimento per aggiornamenti e nuove pagine. L'URL pubblico non è ancora riportato nella documentazione.
+La prima pubblicazione della versione 5 su itch.io è stata completata dallo sviluppatore e confermata in chat. Le istruzioni restano come riferimento per aggiornamenti e nuove pagine. L'URL pubblico non è ancora riportato nella documentazione.
 
 ## File da caricare
 
-Lo ZIP generato è `exports/fieldwork-v5-web-itch.zip`. Contiene `index.html` direttamente nella radice insieme al motore WebAssembly, al codice JavaScript e alle risorse del gioco. Carica lo ZIP intero, senza estrarlo o rinominare i file al suo interno.
+Lo ZIP generato è `exports/fieldwork-v8-web-itch.zip`. Contiene `index.html` direttamente nella radice insieme al motore WebAssembly, al codice JavaScript e alle risorse del gioco. Carica lo ZIP intero, senza estrarlo o rinominare i file al suo interno.
 
 La build usa il renderer Compatibility, un solo thread e canvas adattivo. PWA ed estensioni sono disattivate. Non richiede SharedArrayBuffer o l'opzione sperimentale di isolamento del browser su itch.io.
 
-## Verifica della prima build
+La versione 8 deve essere caricata come nuovo ZIP; nessun aggiornamento è stato pubblicato automaticamente.
+
+## Verifica storica della prima build v5
 
 - Export release completato; template ufficiali verificati contro il checksum SHA-512 della release Godot.
 - ZIP integro, nove file nella radice, 10.389.490 byte compressi e 40.089.935 byte estratti. I file coincidono con la copia per l'anteprima locale.
@@ -26,10 +28,10 @@ La pubblicazione riuscita è confermata dallo sviluppatore. Questo controllo loc
 
 1. Accedi a [itch.io e crea un progetto](https://itch.io/game/new).
 2. Imposta il titolo, per esempio **Fieldwork**, e scegli **HTML** nel campo **Kind of project**. Indica lo stato **In development**.
-3. In **Uploads**, carica `fieldwork-v5-web-itch.zip` e seleziona **This file will be played in the browser** per questo file.
-4. In **Embed options**, scegli **Click to launch in fullscreen**. La UI del laboratorio sfrutta bene uno schermo grande. Se preferisci incorporarlo nella pagina, usa 1440 × 960 e attiva **Fullscreen button** e **Click to play**.
+3. In **Uploads**, carica `fieldwork-v8-web-itch.zip` e seleziona **This file will be played in the browser** per questo file.
+4. In **Embed options**, scegli **Click to launch in fullscreen**. La UI del laboratorio sfrutta bene uno schermo grande; rotella e pinch controllano lo zoom della mappa. Se preferisci incorporarlo nella pagina, usa 1440 × 960 e attiva **Fullscreen button** e **Click to play**.
 5. Non dichiarare il supporto mobile per questa build: i controlli sono pensati per mouse e tastiera. Lascia disattivato **SharedArrayBuffer support**, se disponibile.
-6. Aggiungi descrizione, immagine di copertina e screenshot. Puoi usare `docs/prototype-v5.png`, `docs/funding-overview.png` e la roadmap `docs/fieldwork-roadmap-v5.png`.
+6. Aggiungi descrizione, immagine di copertina e screenshot. La mappa corrente è in `docs/prototype-v8.png`; `docs/funding-overview.png` illustra il sistema di finanziamento. La vecchia immagine `docs/fieldwork-roadmap-v5.png` è storica: per lo stato attuale usa `docs/roadmap.md`.
 7. Salva inizialmente come **Draft**, apri l'anteprima e completa i controlli sotto. Poi imposta la visibilità **Public** e salva per pubblicarlo.
 
 I nomi delle sezioni possono variare con la lingua dell'account. La [guida ufficiale agli HTML5 di itch.io](https://itch.io/docs/creators/html5) descrive ZIP, modalità di incorporamento e limiti degli upload.
@@ -37,7 +39,9 @@ I nomi delle sezioni possono variare con la lingua dell'account. La [guida uffic
 ## Controlli nell'anteprima di itch.io
 
 - Avvia una nuova partita e controlla che parta in pausa con $30.000.
-- Prova tutti i tab, il tutorial, i pulsanti inferiori e lo scaling della UI.
+- Controlla arredi, cornici e cursori; prova zoom, pan e piazzamento.
+- Prova tutti i tab, le priorità Papers first/Grants first, i tooltip e lo scaling della UI.
+- Dopo il primo clic controlla musica ed effetti. Prova i due volumi e il mute in Settings; devono persistere dopo il ricaricamento.
 - Avvia il tempo, poi metti in pausa. Salva in uno slot, attendi qualche secondo e ricarica la pagina. Il laboratorio deve comparire in Continue e Load laboratory.
 - Entra ed esci dal fullscreen, anche dopo aver ricaricato la pagina.
 - Controlla almeno il browser che userai per condividere il gioco con i tester. Il test locale non verifica le impostazioni dell'iframe e dello storage di itch.io.

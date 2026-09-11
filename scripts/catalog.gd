@@ -14,9 +14,9 @@ const EQUIPMENT = {
 	"quantum": {"name": "Quantum rig", "short": "QNT", "cost": 14500.0, "capacity": 45.0, "upkeep": 220.0, "prestige": 0, "unlock": "quantum_lab", "field": "quantum", "secondary": "nuclear", "color": "bf9af2", "description": "Coherence measurements. Upgraded rigs can also probe nuclear spin."}
 }
 const ROLES = {
-	"phd": {"name": "PhD student", "cost": 900.0, "salary": 100.0, "description": "Collects and analyzes data; can also write or study."},
+	"phd": {"name": "PhD student", "cost": 900.0, "salary": 100.0, "description": "60% productivity without supervision, up to 100% with mentoring. Wears instruments by 0.10 condition per operating hour."},
 	"researcher": {"name": "Researcher", "cost": 1800.0, "salary": 200.0, "description": "Writes papers and grant proposals; studies new ideas and can collect or analyze too."},
-	"technician": {"name": "Technician", "cost": 1200.0, "salary": 140.0, "description": "Services individual experiments; can help with data work."}
+	"technician": {"name": "Technician", "cost": 1200.0, "salary": 140.0, "description": "Repairs 1.2 condition/hour before modifiers. Other roles repair 0.45. Can help with data work."}
 }
 const JOURNALS = {
 	"letter": {"name": "Research letter", "tag": "FOCUSED RESULT", "data": 18.0, "work": 10.0, "impact": 2, "prestige": 0, "chance": 0.62, "review": 24},
@@ -24,6 +24,7 @@ const JOURNALS = {
 	"breakthrough": {"name": "High-impact paper", "tag": "FLAGSHIP PAPER", "data": 110.0, "work": 55.0, "impact": 12, "prestige": 7, "chance": 0.35, "review": 72}
 }
 const UPGRADES = {
+	"campus_planning": {"name": "Campus planning", "cost": 18, "requires": "advanced_instruments", "branch": "instrumentation", "description": "After milestone 3, unlock purchase of the first lab wing for $45,000. After discovery, a second wing costs $75,000."},
 	"precision": {"name": "Precision instrumentation", "cost": 2, "requires": "", "branch": "instrumentation", "description": "Unlock level 2 experiments: +50% base capacity. Purchase each upgrade with funds."},
 	"module_slots": {"name": "Modular instruments", "cost": 3, "requires": "precision", "branch": "instrumentation", "description": "Unlock two module slots per experiment and the acquisition accelerator."},
 	"mixed_mode": {"name": "Mixed-mode acquisition", "cost": 3, "requires": "module_slots", "branch": "instrumentation", "description": "Unlock extra data-channel modules and mixed-field paper ideas. Existing level 2/3 instruments also gain their native secondary channel."},

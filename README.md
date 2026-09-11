@@ -1,4 +1,4 @@
-# Fieldwork, iteration 5
+# Fieldwork, iteration 8
 
 A Godot management game about running a physics laboratory. Collect data, analyze it, publish papers, and build toward a major discovery.
 
@@ -6,21 +6,23 @@ A Godot management game about running a physics laboratory. Collect data, analyz
 
 Double-click **Play.command**, or open **project.godot** in Godot and press **F5**. Restart any running copy to use this iteration. Built with Godot 4.7.2 and the compatibility renderer. No plugins are required.
 
-The funding update uses separate version-5 saves. Version-4 files remain on disk and are not imported or overwritten. See [the progression design and playtest plan](docs/progression-design.md).
+Iteration 8 adds Kenney furniture sprites, shaded UI controls and frames, custom cursors, and a warmer cartoon-inspired palette. It includes iteration 7’s automatic paper/grant priorities, three-room laboratory, audio, and concise UI with hover explanations. Version-5/6 saves keep their previous floor plan and receive an original-file backup. See [the progression design and playtest plan](docs/progression-design.md) and [iteration-8 notes](docs/releases/iteration-8.md).
 
-The version-5 browser build has been published on itch.io, as confirmed by the developer. Rebuild it with `python3 tools/export_web.py`; the upload package is `exports/fieldwork-v5-web-itch.zip`. See the [export and publishing guide](docs/publishing-itch.md) for template setup, local preview and upload settings. Browser saves are local to the browser profile and separate from desktop saves.
+The version-5 browser build was published on itch.io. Rebuild the current version with `python3 tools/export_web.py`; the new upload package is `exports/fieldwork-v8-web-itch.zip`. Version 8 requires a new upload and is not automatically published. See the [export and publishing guide](docs/publishing-itch.md) for template setup, local preview and upload settings. Browser saves are local to the browser profile and separate from desktop saves.
 
 Choose a lab name and one research program at the beginning of the run. The game starts paused. **Space** pauses/resumes, and **1 / 2 / 3** select **1x / 2x / 4x**. Days remain **48 seconds at 1x**; paper evidence and writing requirements, review times, and evidence commitments are unchanged.
 
-![Grant-funded laboratory](docs/funding-overview.png)
+![Three-room laboratory with introductory detector](docs/prototype-v8.png)
 
 ## Interface and artwork
 
-The interface uses a dark navy palette with cyan controls and distinct Nuclear, Quantum, Materials, and Optics colors. Buttons animate their hover glow and press feedback without shifting their hit areas. Management windows fade in; the amber pause state remains visible above them. Data-card bars show the proportion of stored data that has been analyzed, with details on hover.
+Kenney’s **Furniture Kit**, **UI Pack** and **Cursor Pack** provide furniture, shaded buttons, nine-slice borders, controls and custom pointers. A teal, cream and warm-wood palette ties the map and management screens together. Headings use Kenney Future; body text retains the standard readable font. Hover and press feedback preserve fixed hit areas, and tooltips hold the detailed explanations.
 
-The notebook keeps its spiral binding and ruled pages in a dark finish. Recruitment portraits, sliders, charts, and the development tree share the new palette. The menu has a subtle animated orbital backdrop.
+The notebook uses cream ruled pages and a teal spiral binding. Portraits and the development tree share the palette. Science field colors remain distinct, with animated instruments and visible module attachments and selection brackets.
 
-Lab graphics are drawn directly in Godot: continuous walls, lit door frames, wall instruments, detailed desks and beds, and four distinct experiment designs. Working instruments show beam travel, rotating readouts, detector sweeps, and status lights. Module attachments and selection brackets remain visible. The game needs no image-generation service or extra runtime asset dependency. The funding update preserves these graphics and the research programs. The economy and save format now follow the grant rules below.
+Desks with computers, beds, plants, shelves, kitchen furniture and lounge chairs are lightweight transparent sprites baked from the Furniture Kit models. Rooms, walls, instruments and staff are drawn in Godot. The art update also applies to existing saves. All three packs are CC0; see [art credits, licenses and reproduction instructions](assets/kenney/CREDITS.md). Assets are bundled locally, including the browser export.
+
+Music starts with the first click or keypress and continues through pauses and menus. **Settings** has independent music and effects sliders; zero mutes either. The soundtrack is Space Flight by wipics and the effects are Interface Sounds by Kenney, both CC0. See [audio credits and sources](assets/audio/CREDITS.md). Trait effects, grant formulas and detailed upgrade rules are available on hover.
 
 ## Research programs
 
@@ -34,7 +36,7 @@ The target icon opens a separate program window and publication archive. Choose 
 
 Each program has four cumulative milestones:
 
-1. **Foundations:** two accepted papers, including one Optics paper. Starter equipment is sufficient.
+1. **Foundations:** two accepted papers, including one in the selected program's principal field. Starter equipment is sufficient.
 2. **Focused studies:** five accepted papers, including two in the principal field and one rare-or-legendary paper in that field.
 3. **Independent evidence:** eight accepted papers, including two mixed-field papers involving the principal field and one legendary paper involving it.
 4. **Major discovery:** ten accepted papers, including two legendary papers involving the principal field and the program's final discovery manuscript.
@@ -47,20 +49,32 @@ The publication archive retains every accepted paper, including both fields, tie
 
 ## The laboratory
 
-Walls and corridors remain fixed. Experiments occupy **2×2** tiles in the upper labs. Desks occupy **2×1** office tiles and require a chair below. Beds occupy **1×2** tiles along the sleeping area's upper wall and require access at their foot. Placement preserves routes to workplaces and beds.
+The initial grid is **28×20**, with three rooms and a corridor. Workstations can be rearranged within the available floor space. Experiments occupy **2×2** tiles, desks **2×1** plus a chair below, and beds **1×2** plus access at their foot. Place them in any room with enough clear floor. Placement respects walls and decorations and preserves workplace routes, the entrance and shared rest seats. Select an object and **Move / free** to reposition it without losing assignments, modules, upgrades or condition.
 
-The founding staff each have a desk and bed. Add beds before hiring if you want new staff to recover efficiently. A new bed automatically goes to the first person without one; otherwise assign ownership in **People**. Beds have exclusive owners. The room fits up to six while keeping an entrance clear.
+Use the wheel or pinch to zoom, middle-button drag or trackpad gestures to pan, and **Fit** to reset the view. After clicking the map, arrow keys also pan. After milestone 3, **Campus planning** costs 18 impact and requires Advanced instrumentation. The first wing costs $45,000 and opens a **34×24** grid. After the major discovery, a second $75,000 wing expands it to **40×24**. Neither is needed to complete the science.
+
+The founding staff each have a desk and bed. Add beds before hiring if you want new staff to recover efficiently. A new bed automatically goes to the first person without one; otherwise assign ownership in **People**. Beds have exclusive owners. More beds can be placed throughout the open floor, subject to access.
 
 - An assigned, reachable bed restores **7 energy per stationary rest hour**.
 - Rest without a bed restores **40%**, initially 2.8 energy/hour.
 - Rest facilities raise these values to 10 and 4 respectively.
 - Working drains energy. Exhausted staff take emergency rest.
 
-Each person has a portrait and matching appearance on the floor, with varied hair, skin, glasses, facial hair, clothing, and build. Staff follow their 24-hour routines and path around furniture. People can pass through one another; desks have one user per work hour.
+Each person has a portrait and matching appearance on the floor, with varied hair, skin, glasses, facial hair, clothing, and build. Staff follow their 24-hour routines and path around furniture. People can pass through one another; desks have one user per work hour. Movement is now **24 tiles per game hour**, up from four; time left after arrival is used for the scheduled task.
+
+Each program starts with an introductory version of its principal instrument: particle detector, quantum rig or materials chamber. All yield **18 base capacity/day** and cost **$60/day** in upkeep. Staff specialize in the chosen field, with three common ideas and one rare idea in that field plus a common secondary-field idea. Advanced construction stays behind technology unlocks; upgrading an introductory instrument converts it to the regular instrument and its upkeep.
+
+## Supervision and maintenance
+
+Assign each PhD a supervisor in People. A researcher supports at most **two students** and spends the first available **two Activity hours per student each day** at a reachable desk on mentoring. Remaining Activity follows Papers first, Grants first, Study or Maintain. Rest, collection and analysis are not taken for mentoring.
+
+PhD research productivity ranges from **60% without coverage to 100% with full coverage**. Today's actual mentoring sets tomorrow's coverage, proportionally to delivered hours. Founding students start covered; changing supervisors resets credit, and losing a supervisor immediately removes the bonus. Insufficient Activity, missing desks and exhaustion can prevent full coverage. The inspector shows reserved hours, delivered mentoring, productivity and cumulative working, walking and waiting time.
+
+Only productive acquisition wears instruments: **0.10 condition points per PhD operating hour**, **0.04 for other roles**. Waiting at a saturated bench does not cause wear. Idle instruments no longer lose condition at midnight. Technicians restore **1.2 condition/hour** before modifiers; other staff restore **0.45**. Manual servicing costs `max($60, ceil(12 × missing condition))`.
 
 ## Data and papers
 
-Nuclear, Quantum, Materials, and Optics each have raw data and analyzed evidence. Students collect during their collection block and analyze at a desk during their analysis block. Remaining gold hours run the selected Activity. **Auto** writes when a manuscript needs work and studies otherwise.
+Nuclear, Quantum, Materials, and Optics each have raw data and analyzed evidence. Students collect during their collection block and analyze at a desk during their analysis block. Remaining gold hours run the selected Activity. **Papers first** works on a manuscript, then an available grant draft, then study. **Grants first** reverses the draft priority. Only researchers prepare grants. Completion can switch to the next task within the same hour. Study and Maintain remain explicit choices.
 
 | Paper tier | Base evidence | Writing work | Acceptance | Review | Impact awarded | Lifetime impact required |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -76,7 +90,7 @@ Study earns points for ideas. **Discover** costs 8 points; journal club refreshe
 
 ## Grants and university support
 
-Paper acceptance awards impact only. A new laboratory receives an equipped lab and a $30,000 startup grant. Salaries are $100/day per PhD, $200 per researcher and $140 per technician. Instrument upkeep starts at $60/$100/$150/$220 for optics/materials/nuclear/quantum; upgrades increase it.
+Paper acceptance awards impact only. A new laboratory receives an equipped lab and a $30,000 startup grant. Salaries are $100/day per PhD, $200 per researcher and $140 per technician. Regular instrument upkeep starts at $60/$100/$150/$220 for optics/materials/nuclear/quantum; upgrades increase it. Every program's introductory instrument costs $60/day.
 
 University support is `120 + min(120, 4 * lifetime impact) * recent activity` per day. The publication bonus stays at full strength for 30 days after publication, then decays linearly to 25% by day 60. Base support stays at $120. Costs and support accrue hourly. Available impact buys technology; lifetime impact determines support and grant odds. The budget strip and purchase tooltips show runway without speculative grant income. Insolvency stops the laboratory, with no automatic bailout.
 
@@ -87,13 +101,13 @@ University support is `120 + min(120, 4 * lifetime impact) * recent activity` pe
 | Standard | $32,000 | 192 | 8 days | Program milestone 1 |
 | Large | $72,000 | 384 | 12 days | Program milestone 2 |
 
-The introductory award is guaranteed once. In Grants, open a draft and assign a researcher's Activity to Proposal. A reachable desk, energy and actual productive hours matter. One draft can be worked on at a time; reviews of different sizes can overlap. Submit a completed draft explicitly, then return writers to Auto while waiting.
+The introductory award is guaranteed once. In Grants, open a draft. Researchers with either writing priority use their free Activity hours on it. A reachable desk, energy and actual productive hours matter. One draft can be worked on at a time; reviews of different sizes can overlap. Submit a completed draft explicitly. Researchers automatically return to papers or study during review.
 
 Ordinary success starts at 55/45/35%, with bonuses from lifetime impact, milestones and extra preparation, capped at 85%. Up to 50% extra hours adds up to 15 percentage points with diminishing returns. Rejection preserves half of the proposal's work for the same proposal and offers a revision bonus of 5 percentage points that does not stack. Shelving loses draft and revision work. The draw and submitted estimate survive saving.
 
 Calls run on fixed periods from day 1: small every 20 days, standard every 30, large every 45. One submission per ordinary size and period. The introductory award has its own application and never delays the first small. Milestones unlock larger grants without postponing existing eligibility. The tab shows the next eligible call, and drafts may be prepared early. Ready and reviewing proposals warn when cash is forecast to run out before a decision. Early version-5 saves retain their cash and historical awards; loading removes the old introductory small-call penalty. The increased startup grant applies only to new laboratories.
 
-Display settings persist separately from saves. The tutorial can be hidden without changing grant eligibility. On narrow layouts or larger UI scales, use Lab / management to switch views; overflowing content remains scrollable.
+Settings persist separately from saves. The tutorial can be hidden without changing grant eligibility. On narrow layouts or larger UI scales, use Lab / management to switch views; overflowing content remains scrollable.
 
 ## Development and modules
 
@@ -121,12 +135,12 @@ The resource graph records cash, typed raw data, evidence, grant awards and dail
 
 ## Saves and controls
 
-Version 5 has five named manual slots and a separate autosave:
+Version 7 keeps the five named slots and autosave filenames so existing browser and desktop saves remain discoverable:
 
 - `fieldwork_autosave_v5.json`
 - `fieldwork_slot_1_v5.json` through `fieldwork_slot_5_v5.json`
 
-Files live in Godot's game-specific `user://` folder. Use **Project → Open User Data Folder** in the editor to locate it. Autosave runs every five lab days, on return to the main menu, and on quitting an active lab. Loading restores paused and preserves pending paper, milestone and grant feedback. Earlier save formats are not listed or imported.
+Files live in Godot's game-specific `user://` folder. Use **Project → Open User Data Folder** in the editor to locate it. Autosave runs every five lab days, on return to the main menu, and on quitting an active lab. Loading restores paused and preserves pending paper, milestone and grant feedback. Version-5/6 data retains its open floor plan, cash, equipment and attained milestones. New games use the furnished three-room plan. Researchers with enough Activity are assigned up to two previously unassigned PhDs. Before the first version-7 write, the old file is copied to `.v5-backup` or `.v6-backup`. New saves use schema 7; older game versions cannot load them. Version-4 files are not imported.
 
 | Action | Control |
 | --- | --- |
@@ -135,6 +149,9 @@ Files live in Godot's game-specific `user://` folder. Use **Project → Open Use
 | Pause menu / close window | Esc |
 | Place furniture | Build card's plus, then valid tile |
 | Cancel placement | Esc or right-click |
+| Move an object | Select it, Move / free, then destination |
+| Map zoom | Wheel, pinch or + / − |
+| Map pan / reset | Middle drag, trackpad or arrow keys / Fit |
 | Inspect | Click a person, desk, bed, or experiment |
 | Research / archive | Target icon |
 | Development | Tree icon |
@@ -143,14 +160,14 @@ Files live in Godot's game-specific `user://` folder. Use **Project → Open Use
 | Help | H or info icon |
 | Grant proposals | Grants tab or coin icon |
 | Step-by-step tutorial | Guide button or pause menu |
-| Fullscreen | F11 or Display settings |
-| UI scale | Display settings, 100% / 115% / 130% |
+| Fullscreen | F11 or Settings |
+| UI scale | Settings, 100% / 115% / 130% |
 
 ## Development roadmap
 
-![Fieldwork version 5 and the six development blocks](docs/fieldwork-roadmap-v5.png)
+The [original version-5 roadmap image](docs/fieldwork-roadmap-v5.png) is a historical snapshot. See the current [roadmap](docs/roadmap.md) for implemented blocks.
 
-Iteration 5 implements the funding economy, onboarding, display options and visual refresh. It is in playtesting. The next planned blocks cover staff supervision and wear, starting specialization and lab expansion, training and visitors, choice events, and scientific rivals.
+Iterations 5–7 implement and refine blocks 1–3: funding, onboarding, display settings, staff supervision and wear, starting specialization and lab expansion. They are in playtesting. Training and visitors, choice events and scientific rivals remain planned.
 
 See the [roadmap](docs/roadmap.md), [iteration-5 release notes](docs/releases/iteration-5.md), and [full design and playtest gates](docs/progression-design.md). Each block is tested and rebalanced before the next begins. Future release numbers and dates are not committed.
 
@@ -171,4 +188,18 @@ The UI suite renders into ignored `docs/screenshots/`; add `--headless` to skip 
 
 The repository uses `main`, with [Alecompa/physics-lab-managment-game](https://github.com/Alecompa/physics-lab-managment-game) configured as `origin`. Source assets, import settings, and `.gd.uid` files are tracked; editor caches, exports, and generated screenshots are ignored.
 
-Verified with Godot 4.7.2: 509 simulation checks, 238 progression checks, 141 existing interface checks, 158 funding checks, 191 balance checks and 62 funding interface checks with rendering. All passed. The rendered suite checks 1280×800, 1440×960 and 1920×1080 at 100%, 115% and 130%, fullscreen and preferences reload. Detailed results are in `docs/progression-design.md`; human playtesting remains required before the next block.
+Verified with Godot 4.7.2: 575 simulation, 238 progression, 141 interface, 158 funding, 191 balance, 60 funding interface, 67 block-2/3 and 42 opening/team checks passed. The iteration-7 suite also verifies priorities, room access, old-save migration, audio preferences and responsive UI with rendering. The moderate-expansion benchmark now survives to day 75 in 30/30 controlled runs; this is not full-program or human validation.
+
+The block-2/3 checks and controlled opening benchmarks can be rerun with:
+
+```sh
+/Applications/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tests/test_blocks23.gd
+/Applications/Godot.app/Contents/MacOS/Godot --path . --script res://tests/test_blocks23_ui.gd
+/Applications/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tests/test_program_openings.gd
+```
+
+Iteration-7 checks:
+
+```sh
+/Applications/Godot.app/Contents/MacOS/Godot --path . --script res://tests/test_iteration7.gd
+```

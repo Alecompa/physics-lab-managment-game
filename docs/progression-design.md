@@ -1,10 +1,10 @@
 # Fieldwork: progressione e piano di playtest
 
-Stato: blocco 1 implementato e ribilanciato dopo il primo feedback umano. I blocchi successivi attendono il playtest e una nuova richiesta di implementazione. I parametri attuali hanno verifiche automatiche; il bilanciamento richiede ulteriore playtesting umano.
+Stato all'11 settembre 2026: blocchi 1–3 implementati. I blocchi 2 e 3 sono stati autorizzati insieme dall'utente e richiedono ora playtest umano. I blocchi 4–6 restano in attesa. I parametri attuali hanno verifiche automatiche; il bilanciamento richiede ulteriore playtesting umano.
 
-Sintesi per i giocatori: [roadmap](roadmap.md). Modifiche della versione attuale: [note della versione 5](releases/iteration-5.md).
+Sintesi per i giocatori: [roadmap](roadmap.md). Modifiche della versione attuale: [note della versione 8](releases/iteration-8.md).
 
-La versione 5 è disponibile anche come build browser per itch.io; lo sviluppatore ne ha confermato la pubblicazione. Preset, procedura di export e controlli su salvataggi, fullscreen e UI web sono nella [guida di pubblicazione](publishing-itch.md). La distribuzione web non cambia i criteri di playtest per passare al blocco 2.
+La versione 5 è disponibile anche come build browser per itch.io; lo sviluppatore ne ha confermato la pubblicazione. Preset, procedura di export e controlli su salvataggi, fullscreen e UI web sono nella [guida di pubblicazione](publishing-itch.md). La distribuzione web non cambia i criteri di playtest per procedere con i blocchi successivi.
 
 ## Obiettivo
 
@@ -60,15 +60,27 @@ Incassi medi teorici dopo il primo ribilanciamento, prima di investimenti: $490/
 
 ## Blocco 2: personale e manutenzione
 
-Supervisione assegnabile: due PhD per ricercatore, due ore Activity al giorno per studente come primo valore. PhD non supervisionati al 60% della produttività. Usura aggiuntiva per ora realmente operativa: 0,04 punti per ricercatore, 0,10 per PhD. Mostrare attese, saturazione e capacità di manutenzione. Ritarare tecnici e riparazioni dopo i test.
+Implementato nella versione 6. Ogni ricercatore supervisiona fino a due PhD. Le prime ore Activity disponibili vengono riservate alla supervisione: due ore reali alla scrivania per studente al giorno. Fatica, spostamenti e indisponibilità della scrivania riducono le ore erogate. Il lavoro restante torna all'Activity scelta. La supervisione non usa ore di raccolta, analisi o riposo.
 
-Controllare squadre ricche di PhD, miste e ricche di ricercatori a budget comparabile. Misurare evidence, paper, candidature, ore di manutenzione e autonomia. I PhD devono restare convenienti nella raccolta senza diventare la risposta ottimale a ogni problema.
+La produttività scientifica di un PhD è `0,60 + 0,40 × copertura`, con copertura fra zero e uno calcolata sulle ore di supervisione ricevute il giorno precedente. I fondatori partono coperti. Una nuova assegnazione azzera il credito e il licenziamento del supervisore toglie subito il bonus. L'UI mostra ore richieste ed erogate, produttività e ore cumulate di lavoro, viaggio e attesa.
+
+L'usura è legata alla raccolta produttiva, comprese le frazioni di ora: 0,10 punti condition per PhD e 0,04 per gli altri ruoli. Nessuna usura per attese a un banco saturo o strumenti inattivi. Rimossa la perdita fissa di 0,45 al giorno. Tecnici: riparazione base 1,2 punti/ora; altri ruoli: 0,45. Service manuale: massimo fra $60 e 12 dollari per punto condition mancante, arrotondato per eccesso.
+
+Playtest: confrontare squadre a stipendi uguali, controllare quanto spesso il ricercatore resta senza ore per grant/paper, copertura dei turni notturni, costo di riparazione e leggibilità delle attese. La squadra ricca di PhD può produrre più dati, ma deve rinunciare a capacità scientifica e finanziaria o spendere di più in manutenzione.
 
 ## Blocco 3: area iniziale ed espansione
 
-Dotazione iniziale coerente con il programma; strumenti introduttivi equivalenti per rendimento e upkeep. Rimuovere l'obbligo universale del paper di ottica nella prima milestone. Conservare gli strumenti avanzati nell'albero. Ampliamento sbloccato dalla progressione e acquistato con fondi, con spazi realmente disponibili per strumenti, letti e scrivanie. Estendere la guida.
+Implementato nella versione 6. La dotazione dipende dal programma: detector nucleare introduttivo per dark matter, quantum rig introduttivo per logical qubit, camera materiali introduttiva per superconductivity. Tutti hanno capacità base 18/giorno e upkeep $60/giorno, con $30.000 iniziali. Specializzazione dello staff, tre idee common e una rare corrispondono al campo principale; una common apre il campo secondario. La prima milestone richiede un paper del campo principale, oltre ai due paper totali. Le altre milestone cumulative rimangono invariate.
 
-Controllare tutti e tre gli avvii: prima pubblicazione, milestone 1, primo standard grant. Nessuna branca deve subire una penalità economica involontaria. L'ampliamento deve offrire nuove possibilità senza essere obbligatorio subito.
+Lo strumento introduttivo non sblocca la costruzione dei corrispondenti strumenti avanzati. Gli upgrade richiedono la tecnologia e convertono lo strumento alle caratteristiche e all'upkeep ordinari. Descrizioni, introduzione e testi delle milestone distinguono controlli dei fondi nei detector, correzione d'errore nei qubit e riproducibilità della fase superconduttiva.
+
+Griglia iniziale 28×20. Dalla versione 7 ha tre stanze collegate da corridoi; le vecchie partite conservano la pianta aperta. Si può costruire in qualunque stanza rispettando muri, arredi fissi e accessi. Oggetti spostabili gratuitamente mantenendo ID, assegnazioni, condition, livello e moduli; destinazioni invalide non modificano lo stato. Entrata, sedute comuni, sedie, piedi dei letti e accessi agli strumenti restano protetti. Zoom con rotella/pinch e pulsanti, pan con tasto centrale/trackpad/frecce, Fit per ripristinare la vista. Velocità da 4 a 24 caselle/ora; il tempo rimanente all'arrivo è produttivo.
+
+Espansioni da endgame: dopo milestone 3 e Advanced instrumentation, Campus planning costa 18 impact. La prima ala costa $45.000 e porta a 34×24. Dopo la major discovery si può acquistare una seconda ala a $75.000, fino a 40×24. Non aumentano automaticamente il personale né sono necessarie per le milestone scientifiche.
+
+Salvataggi: schema 6 con lettura dei v5; nomi dei file conservati per ritrovare le partite web esistenti. Nessun accredito o sostituzione dello strumento in una partita caricata. Prima di sovrascrivere un file v5 si conserva una copia `.v5-backup`. I PhD privi dei nuovi campi ricevono un supervisore se esiste un ricercatore con capacità e Activity sufficienti. Milestone già raggiunte restano valide.
+
+Playtest: su tutti i programmi misurare prima pubblicazione, milestone 1, primo standard, correzioni alla disposizione e tempo perso camminando. Verificare espansioni, spostamenti e UI su sessioni lunghe e browser. Confermare che le ali siano una scelta di crescita, senza obbligare a una spesa prima del completamento scientifico.
 
 ## Blocco 4: formazione e ospiti
 
@@ -104,7 +116,7 @@ La review introduttiva è stata ridotta da cinque giorni a uno: con la prima let
 
 Il primo playtest dell'utente segnala insolvenza attorno al giorno 65 dopo un'espansione moderata, un esperimento e un ricercatore aggiuntivi. Una seconda proposal era pronta, ma il prossimo bando arrivava dopo l'esaurimento della cassa. Il caso è stato riprodotto e corretto nella revisione descritta sotto. Prima del blocco 2 resta da verificare sul campo che un'espansione moderata possa ricevere il successivo esito e recuperare dopo un rifiuto. Il caso con rifiuti consecutivi deve comunque conservare pressione finanziaria.
 
-Nessun blocco successivo autorizzato.
+Stato storico al termine del blocco 1: nessun blocco successivo era ancora autorizzato. L'11 settembre l'utente ha autorizzato i blocchi 2 e 3.
 
 
 ### Ribilanciamento dopo il feedback del giorno 65
@@ -148,4 +160,58 @@ Le nuove run prudenti di `test_funding.gd`, con 64 ore small, superano tutte il 
 
 Sono state renderizzate le schermate funding e le impostazioni a 1280×800, 1440×960 e 1920×1080, alle scale 100%, 115% e 130%. A larghezza logica ridotta il layout alterna laboratorio e gestione tramite un pulsante dedicato, senza tagliare il pannello Grants. Le schermate ampie possono scorrere. Fullscreen e ritorno alla finestra funzionano; le preferenze di scala persistono. La rilettura visiva e il playtest umano delle altre schermate alle scale alte restano nella checklist della prossima sessione.
 
-Per usare le correzioni, riavviare la copia del gioco in esecuzione. Il salvataggio v5 del playtest può essere ricaricato con la sua cassa originale e la prima proposal small subito inviabile. Per provare il grant iniziale da $30.000 occorre una nuova partita. I blocchi 2–6 restano in attesa.
+Per usare le correzioni, riavviare la copia del gioco in esecuzione. Il salvataggio v5 del playtest può essere ricaricato con la sua cassa originale e la prima proposal small subito inviabile. Per provare il grant iniziale da $30.000 occorre una nuova partita. Questo era lo stato della versione 5; i blocchi 2 e 3 sono ora implementati nella versione 6.
+
+### Verifica dei blocchi 2 e 3
+
+I test comprendono 67 controlli dedicati a supervisione, usura produttiva, manutenzione, spostamenti, avvii, espansioni e migrazione, 16 controlli UI con rendering e 42 controlli su avvii e confronti economici. Passano anche simulazione, progressione, UI, funding e scenari di espansione moderata. Le asserzioni ripetute sui percorsi variano di numero con i nuovi tragitti.
+
+Nei 18 avvii controllati, sei seed per programma, le tempistiche di prima pubblicazione, milestone 1, introduttivo e prima review standard coincidono fra le tre branche a parità di seed. Il benchmark iniziale deterministico raggiunge 18 evidence al giorno 4 per tutte e tre. Questi test non misurano la durata di una partita umana completa.
+
+A $800/giorno di stipendi, con quattro banchi e 30 giorni senza paper o grant, i confronti producono:
+
+| Squadra | Evidence | Study point | Usura totale |
+| --- | ---: | ---: | ---: |
+| 6 PhD + 1 ricercatore | 490,6 | 100,3 | 96,5 |
+| 4 PhD + 2 ricercatori | 450,5 | 200,5 | 61,5 |
+| 4 ricercatori | 357,7 | 138,8 | 18,8 |
+
+Le routine sono dichiarate nel report: i ricercatori raccolgono e analizzano nella squadra senza PhD. Il confronto mostra compromessi, non dimostra una strategia ottimale universale. I numeri della tabella sono storici della v6; il [report avvii e squadre](playtest-blocks23-programs.json) viene aggiornato dai test della versione corrente.
+
+La matrice di espansione moderata del blocco 1, aggiornata per pubblicare nel campo iniziale effettivo, supera il giorno 75 in 29/30 run. Il [report economico](playtest-blocks23-economy.json) contiene ora la verifica della versione 7 riportata sotto. Il report originale del blocco 1 rimane come riferimento storico.
+
+Da verificare giocando: interpretazione del bonus applicato il giorno successivo, frequenza dei cambi di supervisore, spostamenti su touchpad, costo delle due ali in endgame e compatibilità del browser su itch.io. Non sono implementati formazione, ospiti, eventi a scelta o rivali.
+
+
+### Versione 7: priorità Activity, ambientazione e audio
+
+Su richiesta del playtest, Papers first e Grants first scelgono l'ordine dei due lavori. Se il primo non è disponibile si passa al secondo, poi allo studio. Si completano prima le ore di supervisione; le frazioni d'ora residue passano al lavoro successivo. Solo i ricercatori scrivono grant. Study e Maintain rimangono scelte esplicite. Creazione e invio delle proposal restano azioni del giocatore. La priorità si modifica sia in People sia in Grants e viene salvata per persona.
+
+Le nuove partite mantengono 28×20 celle ma partono con sala strumenti, ufficio e sala comune collegate da un corridoio. Porte ampie, piante, scaffali, lavagne e cucina danno forma agli spazi; gli arredi funzionali restano spostabili e le ali acquistabili come prima. Muri e decorazioni fisiche sono rispettati da piazzamento e pathfinding. I salvataggi v5/v6 conservano la pianta aperta per evitare che nuovi muri coprano gli oggetti. Lo schema 7 registra la pianta; la prima sovrascrittura salva una copia della vecchia versione.
+
+Musica ambient CC0 e suoni di interazione/esito, inclusi nella build. Volumi separati in Settings, zero per silenziare, preferenze persistenti. Avvio al primo gesto dell'utente per il browser. Crediti e sorgenti in [assets/audio/CREDITS.md](../assets/audio/CREDITS.md).
+
+UI abbreviata in People, Grants, Build, Papers, programmi, albero tecnologico e impostazioni. Costi, scadenze, condizioni di blocco e avvisi finanziari restano visibili; tratti, formule e dettagli sono nei tooltip. La guida completa rimane disponibile.
+
+Verifiche: 55 controlli dedicati, anche con rendering, più regressioni passate. La matrice economica sopravvive fino al giorno 75 in 30/30 scenari di espansione moderata. I 18 avvii mantengono equivalenza tra programmi a parità di seed. Questi test non misurano il comfort d'ascolto né la difficoltà di una partita completa.
+
+Nel playtest controllare:
+- Se la priorità scelta è comprensibile e riduce i cambi manuali durante le review.
+- Se un grant prioritario ritarda troppo i paper quando la copertura PhD assorbe Activity.
+- Congestione delle porte con 8–12 persone e percorsi dopo lo spostamento dei mobili.
+- Utilità dello spazio libero e dei costosi ampliamenti dopo la terza milestone.
+- Volume e ripetitività della musica dopo 20 minuti, chiarezza degli effetti e persistenza del mute nel browser.
+- Visibilità dei tooltip dei tratti, formule dei grant e requisiti delle tecnologie alle scale 100–130%.
+
+
+### Versione 8: asset e leggibilità
+
+Furniture Kit, UI Pack e Cursor Pack di Kenney, tutti CC0, danno al laboratorio uno stile più illustrato: arredi in PNG, pavimenti chiari, controlli in rilievo, cornici e puntatori dedicati. I dettagli dei pacchetti e le licenze sono in [crediti grafici](../assets/kenney/CREDITS.md). L'economia e la geometria di piazzamento rimangono quelle della versione 7; questo aggiornamento non introduce il blocco 4.
+
+Controllare durante il playtest:
+
+- Riconoscimento di scrivanie, letti, strumenti e porte a zoom Fit e durante il pan.
+- Corrispondenza tra cursore, cella evidenziata e oggetto piazzato, anche con UI al 130%.
+- Leggibilità dei titoli, del quaderno, delle barre di avanzamento e dei tooltip.
+- Distinzione fra pulsanti attivi, selezionati, premuti e disabilitati.
+- Avvio della nuova build nel browser, senza risorse mancanti, e corretta visualizzazione delle partite salvate.

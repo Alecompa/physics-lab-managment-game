@@ -104,7 +104,7 @@ func run_tests() -> void:
 	check(person.experiment == -1, "Removing an assigned experiment resets station selection")
 	reset_lab()
 	check(sim.desks.size() == 3 and sim.valid_save(sim.snapshot()), "Starting furniture forms a valid save")
-	check(not sim.place_desk(Vector2i(4, 7)), "Corridor desk placement rejected")
+	check(sim.can_place("desk", Vector2i(4, 7)), "Open floor accepts desks outside the former office")
 	check(not sim.place_desk(Vector2i(2, 10)), "Desk cannot occupy an existing chair")
 	check(sim.place_desk(Vector2i(5, 11)), "Desk can be physically placed in the office")
 	check(sim.navigation.is_point_solid(Vector2i(5, 11)) and not sim.navigation.is_point_solid(Vector2i(5, 12)), "Desktop is solid and chair stays accessible")

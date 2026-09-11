@@ -1,0 +1,214 @@
+{
+	"openings": [
+		{
+			"bankrupt": false,
+			"first_publication": 7,
+			"first_standard_decision": 44,
+			"funds": 73732,
+			"intro_award": 12,
+			"milestone_1": 19,
+			"program": "dark_matter",
+			"seed": 1
+		},
+		{
+			"bankrupt": false,
+			"first_publication": 7,
+			"first_standard_decision": 44,
+			"funds": 73732,
+			"intro_award": 12,
+			"milestone_1": 19,
+			"program": "dark_matter",
+			"seed": 2
+		},
+		{
+			"bankrupt": false,
+			"first_publication": 19,
+			"first_standard_decision": 50,
+			"funds": 71703,
+			"intro_award": 12,
+			"milestone_1": 23,
+			"program": "dark_matter",
+			"seed": 3
+		},
+		{
+			"bankrupt": false,
+			"first_publication": 7,
+			"first_standard_decision": 52,
+			"funds": 84639,
+			"intro_award": 12,
+			"milestone_1": 23,
+			"program": "dark_matter",
+			"seed": 4
+		},
+		{
+			"bankrupt": false,
+			"first_publication": 19,
+			"first_standard_decision": 68,
+			"funds": 33191,
+			"intro_award": 12,
+			"milestone_1": 44,
+			"program": "dark_matter",
+			"seed": 5
+		},
+		{
+			"bankrupt": false,
+			"first_publication": 28,
+			"first_standard_decision": 56,
+			"funds": 37132,
+			"intro_award": 12,
+			"milestone_1": 32,
+			"program": "dark_matter",
+			"seed": 6
+		},
+		{
+			"bankrupt": false,
+			"first_publication": 7,
+			"first_standard_decision": 44,
+			"funds": 73732,
+			"intro_award": 12,
+			"milestone_1": 19,
+			"program": "logical_qubit",
+			"seed": 1
+		},
+		{
+			"bankrupt": false,
+			"first_publication": 7,
+			"first_standard_decision": 44,
+			"funds": 73732,
+			"intro_award": 12,
+			"milestone_1": 19,
+			"program": "logical_qubit",
+			"seed": 2
+		},
+		{
+			"bankrupt": false,
+			"first_publication": 19,
+			"first_standard_decision": 50,
+			"funds": 71703,
+			"intro_award": 12,
+			"milestone_1": 23,
+			"program": "logical_qubit",
+			"seed": 3
+		},
+		{
+			"bankrupt": false,
+			"first_publication": 7,
+			"first_standard_decision": 52,
+			"funds": 84639,
+			"intro_award": 12,
+			"milestone_1": 23,
+			"program": "logical_qubit",
+			"seed": 4
+		},
+		{
+			"bankrupt": false,
+			"first_publication": 19,
+			"first_standard_decision": 68,
+			"funds": 33191,
+			"intro_award": 12,
+			"milestone_1": 44,
+			"program": "logical_qubit",
+			"seed": 5
+		},
+		{
+			"bankrupt": false,
+			"first_publication": 28,
+			"first_standard_decision": 56,
+			"funds": 37132,
+			"intro_award": 12,
+			"milestone_1": 32,
+			"program": "logical_qubit",
+			"seed": 6
+		},
+		{
+			"bankrupt": false,
+			"first_publication": 7,
+			"first_standard_decision": 44,
+			"funds": 73732,
+			"intro_award": 12,
+			"milestone_1": 19,
+			"program": "superconductivity",
+			"seed": 1
+		},
+		{
+			"bankrupt": false,
+			"first_publication": 7,
+			"first_standard_decision": 44,
+			"funds": 73732,
+			"intro_award": 12,
+			"milestone_1": 19,
+			"program": "superconductivity",
+			"seed": 2
+		},
+		{
+			"bankrupt": false,
+			"first_publication": 19,
+			"first_standard_decision": 50,
+			"funds": 71703,
+			"intro_award": 12,
+			"milestone_1": 23,
+			"program": "superconductivity",
+			"seed": 3
+		},
+		{
+			"bankrupt": false,
+			"first_publication": 7,
+			"first_standard_decision": 52,
+			"funds": 84639,
+			"intro_award": 12,
+			"milestone_1": 23,
+			"program": "superconductivity",
+			"seed": 4
+		},
+		{
+			"bankrupt": false,
+			"first_publication": 19,
+			"first_standard_decision": 68,
+			"funds": 33191,
+			"intro_award": 12,
+			"milestone_1": 44,
+			"program": "superconductivity",
+			"seed": 5
+		},
+		{
+			"bankrupt": false,
+			"first_publication": 28,
+			"first_standard_decision": 56,
+			"funds": 37132,
+			"intro_award": 12,
+			"milestone_1": 32,
+			"program": "superconductivity",
+			"seed": 6
+		}
+	],
+	"scope": "Controlled opening and equal-salary production benchmarks, not human or endgame validation",
+	"teams": [
+		{
+			"evidence": 181.9,
+			"phds": 6,
+			"researchers": 1,
+			"salary_per_day": 800,
+			"scope": "30 days, equal salaries, four benches, no papers or grants; researchers collect/analyze when no PhDs are present",
+			"study_points": 106.8,
+			"wear_total": 56.7
+		},
+		{
+			"evidence": 0.0,
+			"phds": 4,
+			"researchers": 2,
+			"salary_per_day": 800,
+			"scope": "30 days, equal salaries, four benches, no papers or grants; researchers collect/analyze when no PhDs are present",
+			"study_points": 213.6,
+			"wear_total": 41.2
+		},
+		{
+			"evidence": 0.0,
+			"phds": 0,
+			"researchers": 4,
+			"salary_per_day": 800,
+			"scope": "30 days, equal salaries, four benches, no papers or grants; researchers collect/analyze when no PhDs are present",
+			"study_points": 0.0,
+			"wear_total": 12.4
+		}
+	]
+}

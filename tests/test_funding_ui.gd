@@ -35,7 +35,7 @@ func run() -> void:
 	check(game.tabs.has("Grants") and game.page == "Grants", "Fourth tab opens grants")
 	check(game.budget_label.text.contains("$460") and game.budget_label.text.contains("88 days"), "Budget strip shows costs and conservative runway")
 	check(game.impact_label.text == "0 / 0", "Available and lifetime impact visible separately")
-	check(game.tutorial_row.visible and game.tutorial_label.text.contains("Resume"), "Guide gives explicit first action")
+	check(game.tutorial_row.visible and game.tutorial_label.text.contains("Space"), "Guide gives explicit first action")
 	check(text_in(game.sidebar, "Submit your first paper"), "Introductory grant explains its prerequisite")
 	await capture("funding-v5-start")
 	game._set_page("Papers")
@@ -54,7 +54,9 @@ func run() -> void:
 	game._set_page("Grants")
 	check(press(game.sidebar, "Start proposal"), "Intro draft starts from grant tab")
 	await settle()
-	check(press(game.sidebar, "Proposal") and game.sim.staff[2].duty == "proposal", "Grant tab assigns researcher")
+	var priority = game.sidebar.find_children("*", "OptionButton", true, false)[0]
+	priority.item_selected.emit(1)
+	check(game.sim.staff[2].duty == "proposal", "Grant tab assigns researcher priority")
 	var proposal = game.sim.proposal_for("intro")
 	proposal.progress = proposal.work; proposal.stage = "ready"
 	game._rebuild_sidebar()
@@ -67,14 +69,14 @@ func run() -> void:
 	await settle()
 	check(game.modal_title.text == "Grant awarded" and game.pause_button.disabled, "Grant decision opens feedback and blocks resume")
 	await capture("funding-v5-award")
-	check(press(game.modal_box, "Review grants / remain paused"), "Grant feedback can return to management")
+	check(press(game.modal_box, "Review grants"), "Grant feedback can return to management")
 	await settle()
 	check(game.sim.grant_results.is_empty() and game.sim.paused and game.page == "Grants", "Acknowledgement stays paused and clears pending award")
 	game._grant_history()
 	check(text_in(game.modal_box, "Startup grant") and text_in(game.modal_box, "Introductory grant"), "History separates startup and proposal funding")
 	game._close_modal()
 	game._tutorial_window()
-	check(text_in(game.modal_box, "Introduction complete"), "Tutorial recognizes completed grant")
+	check(text_in(game.modal_box, "Keep publishing"), "Tutorial recognizes completed grant")
 	check(press(game.modal_box, "Hide guide"), "Guide can be hidden")
 	check(not game.sim.tutorial_enabled and not game.tutorial_row.visible, "Guide preference applies immediately")
 	game._close_modal()
@@ -88,10 +90,10 @@ func run() -> void:
 	proposal.review_left = 1; proposal.review_roll = 1
 	game.sim.advance_hour()
 	await settle()
-	check(game.modal_title.text == "Grant decision" and text_in(game.modal_box, "Half"), "Rejection explains retained work")
+	check(game.modal_title.text == "Grant decision" and text_in(game.modal_box, "50% work retained"), "Rejection explains retained work")
 	game._close_modal(); await settle()
 	game._set_page("Grants")
-	check(text_in(game.sidebar, "Revision retains 96"), "Rejected proposal shows revision credit")
+	check(text_in(game.sidebar, "Revision credit: 96"), "Rejected proposal shows revision credit")
 	await capture("funding-v5-revision")
 	# Simultaneous paper and grant results: paper feedback must stay first.
 	game.sim.new_lab(); game.sim.first_submission_day = 1
@@ -104,7 +106,7 @@ func run() -> void:
 	game.sim.submit_proposal("intro"); proposal.review_left = 1
 	game.sim.advance_hour(); await settle()
 	check(game.modal_title.text == "Published" and game.sim.grant_results.size() == 1, "Paper decision has priority over simultaneous grant")
-	press(game.modal_box, "Close / remain paused"); await settle()
+	press(game.modal_box, "Close"); await settle()
 	check(game.modal_title.text == "Grant awarded", "Queued grant feedback follows paper acknowledgement")
 	press(game.modal_box, "Resume simulation"); await settle()
 	check(not game.sim.feedback_blocked() and not game.sim.paused, "All feedback can be acknowledged without deadlock")
